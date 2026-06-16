@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Editar perfil — GrupetaWeb{% endblock %}
+{% block content %}
+<div class="max-w-lg mx-auto bg-white rounded-lg shadow p-8">
+    <h1 class="text-xl font-bold text-gray-900 mb-6">Editar mi perfil</h1>
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <p class="text-red-600 text-xs mt-1">{{ field.errors.0 }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="flex space-x-3 pt-2">
+            <button type="submit"
+                    class="bg-gray-900 text-white px-6 py-2 rounded hover:bg-gray-700 text-sm">
+                Guardar
+            </button>
+            <a href="{% url 'members:list' %}"
+               class="border border-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-50 text-sm">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

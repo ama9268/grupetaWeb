@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}{{ route.title }} — GrupetaWeb{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">{{ route.title }}</h1>
+        <p class="text-sm text-gray-500 mt-1">
+            Por {{ route.author.get_full_name|default:route.author.email }} · {{ route.created_at|date:"d/m/Y" }}
+        </p>
+        {% if route.description %}
+        <p class="mt-3 text-gray-700">{{ route.description }}</p>
+        {% endif %}
+
+        <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+            <div class="bg-gray-50 rounded p-3">
+                <p class="text-xl font-bold text-gray-900">{{ route.distance_km|default:"—" }}</p>
+                <p class="text-xs text-gray-500">km totales</p>
+            </div>
+            <div class="bg-gray-50 rounded p-3">
+                <p class="text-xl font-bold text-green-700">+{{ route.elevation_gain_m|default:"—" }}</p>
+                <p class="text-xs text-gray-500">m ascenso</p>
+            </div>
+            <div class="bg-gray-50 rounded p-3">
+                <p class="text-xl font-bold text-red-700">-{{ route.elevation_loss_m|default:"—" }}</p>
+                <p class="text-xs text-gray-500">m descenso</p>
+            </div>
+            <div class="bg-gray-50 rounded p-3">
+                <p class="text-xl font-bold text-gray-900">{{ route.max_elevation_m|default:"—" }}</p>
+                <p class="text-xs text-gray-500">m máx. altitud</p>
+            </div>
+        </div>
+    </div>
+
+    {% if route.track_geojson %}
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+        <div id="map" class="w-full h-96"></div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow p-4">
+        <a href="{{ route.gpx_file.url }}" download
+           class="text-sm text-blue-600 hover:underline">
+            Descargar archivo GPX
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if route.track_geojson %}
+<script>
+const trackPoints = {{ route.track_geojson|safe }};
+if (trackPoints && trackPoints.length > 0) {
+    const map = L.map('map');
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    const polyline = L.polyline(trackPoints, {color: '#dc2626', weight: 3}).addTo(map);
+    map.fitBounds(polyline.getBounds(), {padding: [20, 20]});
+    L.marker(trackPoints[0]).addTo(map).bindPopup('Inicio');
+    L.marker(trackPoints[trackPoints.length - 1]).addTo(map).bindPopup('Fin');
+}
+</script>
+{% endif %}
+{% endblock %}

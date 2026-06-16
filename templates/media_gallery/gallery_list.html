@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Galería — GrupetaWeb{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Galería</h1>
+    <a href="{% url 'media_gallery:upload' %}"
+       class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">
+        + Subir
+    </a>
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+    {% for item in items %}
+    <div class="relative group rounded-lg overflow-hidden bg-gray-100 aspect-square">
+        {% if item.media_type == 'image' %}
+        <img src="{{ item.cloudinary_url }}"
+             alt="{{ item.title|default:'Imagen' }}"
+             class="w-full h-full object-cover">
+        {% else %}
+        <video src="{{ item.cloudinary_url }}" class="w-full h-full object-cover"></video>
+        <div class="absolute inset-0 flex items-center justify-center">
+            <div class="bg-black bg-opacity-40 rounded-full p-3">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+                </svg>
+            </div>
+        </div>
+        {% endif %}
+        {% if item.uploaded_by == request.user or request.user.profile.is_moderator %}
+        <div class="absolute top-2 right-2 hidden group-hover:block">
+            <form method="post" action="{% url 'media_gallery:delete' item.pk %}"
+                  onsubmit="return confirm('¿Eliminar este archivo?')">
+                {% csrf_token %}
+                <button type="submit"
+                        class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">
+                    ×
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <p class="col-span-full text-gray-500 text-center py-12">La galería está vacía. ¡Sube la primera foto!</p>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div class="mt-8 flex justify-center space-x-2">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded text-sm">Anterior</a>
+    {% endif %}
+    <span class="px-3 py-1 text-sm text-gray-600">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded text-sm">Siguiente</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

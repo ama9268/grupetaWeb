@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Gestión de usuarios — GrupetaWeb{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Usuarios pendientes de aprobación</h1>
+
+    {% if pending_users %}
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha de registro</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for pending_user in pending_users %}
+                <tr>
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ pending_user.email }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ pending_user.date_joined|date:"d/m/Y H:i" }}</td>
+                    <td class="px-6 py-4 text-sm space-x-2">
+                        <form method="post" action="{% url 'accounts:approve_user' pending_user.pk %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">
+                                Aprobar
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'accounts:reject_user' pending_user.pk %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700">
+                                Rechazar
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-white shadow rounded-lg p-8 text-center text-gray-500">
+        No hay usuarios pendientes de aprobación.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

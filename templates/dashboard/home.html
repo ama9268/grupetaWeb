@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Inicio — GrupetaWeb{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-900 mb-6">Bienvenido, {{ request.user.get_first_name|default:request.user.email }}</h1>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <div class="lg:col-span-2 space-y-6">
+
+        {% if upcoming_events %}
+        <section class="bg-white rounded-lg shadow p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Próximos eventos</h2>
+                <a href="{% url 'events:list' %}" class="text-sm text-blue-600 hover:underline">Ver todos</a>
+            </div>
+            <div class="space-y-3">
+                {% for event in upcoming_events %}
+                <a href="{% url 'events:detail' event.pk %}"
+                   class="flex justify-between items-center p-3 rounded-lg hover:bg-gray-50 transition">
+                    <div>
+                        <p class="font-medium text-gray-900">{{ event.title }}</p>
+                        {% if event.location %}
+                        <p class="text-xs text-gray-500">{{ event.location }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="text-right text-sm flex-shrink-0 ml-3">
+                        <p class="font-bold text-gray-800">{{ event.date|date:"d/m" }}</p>
+                        <p class="text-gray-500">{{ event.date|time:"H:i" }}</p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if recent_posts %}
+        <section class="bg-white rounded-lg shadow p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Últimas entradas del blog</h2>
+                <a href="{% url 'blog:list' %}" class="text-sm text-blue-600 hover:underline">Ver todo</a>
+            </div>
+            <div class="divide-y">
+                {% for post in recent_posts %}
+                <a href="{% url 'blog:detail' post.pk %}"
+                   class="flex justify-between items-start py-3 hover:bg-gray-50 px-1 rounded transition">
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900 truncate">{{ post.title }}</p>
+                        <p class="text-xs text-gray-500">{{ post.author.get_full_name|default:post.author.email }}</p>
+                    </div>
+                    <p class="text-xs text-gray-400 flex-shrink-0 ml-3">{{ post.created_at|date:"d/m" }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if recent_media %}
+        <section class="bg-white rounded-lg shadow p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Fotos recientes</h2>
+                <a href="{% url 'media_gallery:list' %}" class="text-sm text-blue-600 hover:underline">Ver galería</a>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+                {% for item in recent_media %}
+                {% if item.media_type == 'image' %}
+                <img src="{{ item.cloudinary_url }}" alt=""
+                     class="aspect-square object-cover rounded-lg w-full">
+                {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+    </div>
+
+    <aside class="space-y-6">
+        {% if top_members %}
+        <section class="bg-white rounded-lg shadow p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Ranking km</h2>
+                <a href="{% url 'members:list' %}" class="text-sm text-blue-600 hover:underline">Ver todos</a>
+            </div>
+            <ol class="space-y-3">
+                {% for member in top_members %}
+                <li class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-gray-400 w-4">{{ forloop.counter }}.</span>
+                        <a href="{% url 'members:detail' member.pk %}"
+                           class="text-sm text-gray-800 hover:text-blue-700 truncate max-w-[120px]">
+                            {{ member.user.get_full_name|default:member.user.email }}
+                        </a>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">{{ member.total_km }} km</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </section>
+        {% endif %}
+
+        <section class="bg-white rounded-lg shadow p-5">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Acceso rápido</h2>
+            <div class="space-y-2">
+                <a href="{% url 'routes:create' %}"
+                   class="block w-full text-center bg-gray-900 text-white py-2 rounded text-sm hover:bg-gray-700">
+                    + Publicar ruta
+                </a>
+                <a href="{% url 'blog:create' %}"
+                   class="block w-full text-center border border-gray-900 text-gray-900 py-2 rounded text-sm hover:bg-gray-50">
+                    + Escribir post
+                </a>
+                <a href="{% url 'chat:room' %}"
+                   class="block w-full text-center border border-gray-300 text-gray-600 py-2 rounded text-sm hover:bg-gray-50">
+                    Ir al chat
+                </a>
+            </div>
+        </section>
+    </aside>
+
+</div>
+{% endblock %}

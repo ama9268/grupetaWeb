@@ -1,0 +1,16 @@
+django>=5.1,<6.0
+django-environ
+django-allauth[mfa]
+django-storages[cloudinary]
+cloudinary
+django-cloudinary-storage
+gpxpy
+pillow
+psycopg2-binary
+channels
+channels-redis
+redis
+whitenoise
+daphne
+pytest-django
+filetype

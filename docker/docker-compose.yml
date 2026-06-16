@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+    env_file:
+      - ../.env
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - grupeta_network
+
+networks:
+  grupeta_network:
+    external: true

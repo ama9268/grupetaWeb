@@ -1,0 +1,8 @@
+Hola {{ user.email }},
+
+Tu cuenta en GrupetaWeb ha sido aprobada. Ya puedes acceder a la plataforma:
+{{ site_url }}/accounts/login/
+
+¡Bienvenido/a a la grupeta!
+
+— GrupetaWeb

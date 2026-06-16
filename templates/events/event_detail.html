@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}{{ event.title }} — GrupetaWeb{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">{{ event.title }}</h1>
+        <div class="mt-2 flex flex-wrap gap-4 text-sm text-gray-600">
+            <span>{{ event.date|date:"l, d/m/Y \a \l\a\s H:i" }}</span>
+            {% if event.location %}<span>{{ event.location }}</span>{% endif %}
+        </div>
+        {% if event.description %}
+        <p class="mt-4 text-gray-700">{{ event.description }}</p>
+        {% endif %}
+        {% if event.associated_route %}
+        <p class="mt-3 text-sm">
+            Ruta asociada:
+            <a href="{% url 'routes:detail' event.associated_route.pk %}"
+               class="text-blue-600 hover:underline">{{ event.associated_route.title }}</a>
+        </p>
+        {% endif %}
+    </div>
+
+    {% include 'events/partials/rsvp_widget.html' %}
+</div>
+{% endblock %}

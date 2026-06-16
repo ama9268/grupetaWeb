@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Rutas — GrupetaWeb{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Rutas</h1>
+    <a href="{% url 'routes:create' %}"
+       class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">
+        + Nueva ruta
+    </a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for route in routes %}
+    <a href="{% url 'routes:detail' route.pk %}"
+       class="block bg-white rounded-lg shadow hover:shadow-md transition p-5">
+        <h2 class="font-semibold text-gray-900 truncate">{{ route.title }}</h2>
+        <p class="text-xs text-gray-500 mt-1">{{ route.author.get_full_name|default:route.author.email }}</p>
+        <div class="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
+            <div>
+                <p class="font-bold text-gray-900">{{ route.distance_km|default:"—" }}</p>
+                <p class="text-xs text-gray-500">km</p>
+            </div>
+            <div>
+                <p class="font-bold text-gray-900">+{{ route.elevation_gain_m|default:"—" }}</p>
+                <p class="text-xs text-gray-500">m+</p>
+            </div>
+            <div>
+                <p class="font-bold text-gray-900">-{{ route.elevation_loss_m|default:"—" }}</p>
+                <p class="text-xs text-gray-500">m-</p>
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-3">{{ route.created_at|date:"d/m/Y" }}</p>
+    </a>
+    {% empty %}
+    <p class="col-span-full text-gray-500 text-center py-12">No hay rutas todavía. ¡Sube la primera!</p>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div class="mt-8 flex justify-center space-x-2">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded text-sm">Anterior</a>
+    {% endif %}
+    <span class="px-3 py-1 text-sm text-gray-600">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded text-sm">Siguiente</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

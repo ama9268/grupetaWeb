@@ -1,0 +1,15 @@
+<span id="like-section-{{ post.pk }}">
+    <form hx-post="{% url 'blog:toggle_like' post.pk %}"
+          hx-target="#like-section-{{ post.pk }}"
+          hx-swap="outerHTML"
+          style="display:inline">
+        {% csrf_token %}
+        <button type="submit"
+                class="flex items-center space-x-1 text-sm px-3 py-1 rounded border
+                {% if user_liked %}border-red-500 text-red-600 bg-red-50
+                {% else %}border-gray-300 text-gray-600 hover:border-red-300{% endif %}">
+            <span>{% if user_liked %}♥{% else %}♡{% endif %}</span>
+            <span>{{ likes_count }}</span>
+        </button>
+    </form>
+</span>

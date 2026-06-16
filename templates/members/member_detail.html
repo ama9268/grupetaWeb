@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}{{ member_profile.user.get_full_name|default:member_profile.user.email }} — GrupetaWeb{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white rounded-lg shadow p-8">
+    <div class="flex items-start space-x-6">
+        {% if member_profile.photo %}
+        <img src="{{ member_profile.photo.url }}" alt=""
+             class="w-24 h-24 rounded-full object-cover flex-shrink-0">
+        {% else %}
+        <div class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-3xl flex-shrink-0">
+            {{ member_profile.user.email|first|upper }}
+        </div>
+        {% endif %}
+        <div class="flex-1 min-w-0">
+            <h1 class="text-2xl font-bold text-gray-900">
+                {{ member_profile.user.get_full_name|default:member_profile.user.email }}
+            </h1>
+            <p class="text-gray-500 text-sm">{{ member_profile.get_role_display }}</p>
+            {% if member_profile.bio %}
+            <p class="mt-3 text-gray-700">{{ member_profile.bio }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-6 grid grid-cols-3 gap-4 text-center border-t pt-6">
+        <div>
+            <p class="text-2xl font-bold text-gray-900">{{ member_profile.total_km }}</p>
+            <p class="text-xs text-gray-500">km totales</p>
+        </div>
+        <div>
+            <p class="text-2xl font-bold text-gray-900">{{ member_profile.total_routes }}</p>
+            <p class="text-xs text-gray-500">rutas</p>
+        </div>
+        <div>
+            <p class="text-2xl font-bold text-gray-900">{{ member_profile.total_events_attended }}</p>
+            <p class="text-xs text-gray-500">eventos</p>
+        </div>
+    </div>
+
+    {% if member_profile.bikes %}
+    <div class="mt-6 border-t pt-6">
+        <h2 class="text-sm font-semibold text-gray-700 mb-2">Bicicletas</h2>
+        <ul class="text-gray-600 text-sm space-y-1">
+            {% for bike in member_profile.bikes.splitlines %}
+            {% if bike %}<li>• {{ bike }}</li>{% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if member_profile.user == request.user %}
+    <div class="mt-6 border-t pt-4">
+        <a href="{% url 'members:profile_edit' %}"
+           class="text-sm text-blue-600 hover:underline">Editar mi perfil</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

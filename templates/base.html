@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GrupetaWeb{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+    {% if user.is_authenticated %}
+    <nav class="bg-gray-900 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xl font-bold">GrupetaWeb</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="{% url 'dashboard:home' %}" class="hover:text-gray-300 text-sm font-medium">Inicio</a>
+                    <a href="{% url 'members:list' %}" class="hover:text-gray-300 text-sm font-medium">Miembros</a>
+                    <a href="{% url 'routes:list' %}" class="hover:text-gray-300 text-sm font-medium">Rutas</a>
+                    <a href="{% url 'events:list' %}" class="hover:text-gray-300 text-sm font-medium">Eventos</a>
+                    <a href="{% url 'blog:list' %}" class="hover:text-gray-300 text-sm font-medium">Blog</a>
+                    <a href="{% url 'media_gallery:list' %}" class="hover:text-gray-300 text-sm font-medium">Galería</a>
+                    <a href="{% url 'chat:room' %}" class="hover:text-gray-300 text-sm font-medium">Chat</a>
+                    <a href="{% url 'account_logout' %}" class="hover:text-gray-300 text-sm font-medium">Salir</a>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-btn" type="button" class="text-gray-300 hover:text-white p-2">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden px-4 pb-4 space-y-2">
+            <a href="{% url 'dashboard:home' %}" class="block hover:text-gray-300 text-sm">Inicio</a>
+            <a href="{% url 'members:list' %}" class="block hover:text-gray-300 text-sm">Miembros</a>
+            <a href="{% url 'routes:list' %}" class="block hover:text-gray-300 text-sm">Rutas</a>
+            <a href="{% url 'events:list' %}" class="block hover:text-gray-300 text-sm">Eventos</a>
+            <a href="{% url 'blog:list' %}" class="block hover:text-gray-300 text-sm">Blog</a>
+            <a href="{% url 'media_gallery:list' %}" class="block hover:text-gray-300 text-sm">Galería</a>
+            <a href="{% url 'chat:room' %}" class="block hover:text-gray-300 text-sm">Chat</a>
+            <a href="{% url 'account_logout' %}" class="block hover:text-gray-300 text-sm">Salir</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 mt-4 space-y-2">
+        {% for message in messages %}
+        <div class="p-3 rounded text-sm
+            {% if message.tags == 'success' %}bg-green-100 text-green-800
+            {% elif message.tags == 'error' %}bg-red-100 text-red-800
+            {% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800
+            {% else %}bg-blue-100 text-blue-800{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        if (btn) btn.addEventListener('click', () => menu.classList.toggle('hidden'));
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

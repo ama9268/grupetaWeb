@@ -1,0 +1,11 @@
+Hola,
+
+Hay un nuevo registro pendiente de aprobación en GrupetaWeb:
+
+Email: {{ new_user.email }}
+Fecha: {{ new_user.date_joined }}
+
+Accede al panel de gestión para aprobar o rechazar el registro:
+{{ site_url }}/accounts/manage/
+
+— GrupetaWeb
