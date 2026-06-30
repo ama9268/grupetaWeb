@@ -1,78 +1,168 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="es" class="h-full bg-gray-50">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}GrupetaWeb{% endblock %}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
-    {% block extra_head %}{% endblock %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}6el1{% endblock %} · 6el1</title>
+
+  {# theme.js antes del render para evitar flash de color #}
+  <script src="{% static 'js/theme.js' %}"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
+
+  {% block extra_head %}{% endblock %}
 </head>
-<body class="h-full"
-      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
-    {% if user.is_authenticated %}
-    <nav class="bg-gray-900 text-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-2">
-                    <span class="text-xl font-bold">GrupetaWeb</span>
-                </div>
-                <div class="hidden md:flex items-center space-x-4">
-                    <a href="{% url 'dashboard:home' %}" class="hover:text-gray-300 text-sm font-medium">Inicio</a>
-                    <a href="{% url 'members:list' %}" class="hover:text-gray-300 text-sm font-medium">Miembros</a>
-                    <a href="{% url 'routes:list' %}" class="hover:text-gray-300 text-sm font-medium">Rutas</a>
-                    <a href="{% url 'events:list' %}" class="hover:text-gray-300 text-sm font-medium">Eventos</a>
-                    <a href="{% url 'blog:list' %}" class="hover:text-gray-300 text-sm font-medium">Blog</a>
-                    <a href="{% url 'media_gallery:list' %}" class="hover:text-gray-300 text-sm font-medium">Galería</a>
-                    <a href="{% url 'chat:room' %}" class="hover:text-gray-300 text-sm font-medium">Chat</a>
-                    <a href="{% url 'account_logout' %}" class="hover:text-gray-300 text-sm font-medium">Salir</a>
-                </div>
-                <div class="md:hidden">
-                    <button id="mobile-menu-btn" type="button" class="text-gray-300 hover:text-white p-2">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div id="mobile-menu" class="hidden md:hidden px-4 pb-4 space-y-2">
-            <a href="{% url 'dashboard:home' %}" class="block hover:text-gray-300 text-sm">Inicio</a>
-            <a href="{% url 'members:list' %}" class="block hover:text-gray-300 text-sm">Miembros</a>
-            <a href="{% url 'routes:list' %}" class="block hover:text-gray-300 text-sm">Rutas</a>
-            <a href="{% url 'events:list' %}" class="block hover:text-gray-300 text-sm">Eventos</a>
-            <a href="{% url 'blog:list' %}" class="block hover:text-gray-300 text-sm">Blog</a>
-            <a href="{% url 'media_gallery:list' %}" class="block hover:text-gray-300 text-sm">Galería</a>
-            <a href="{% url 'chat:room' %}" class="block hover:text-gray-300 text-sm">Chat</a>
-            <a href="{% url 'account_logout' %}" class="block hover:text-gray-300 text-sm">Salir</a>
-        </div>
+{% if user.is_authenticated %}
+<header class="topbar">
+  <div class="topbar-inner">
+
+    {# Logo #}
+    <a href="{% url 'dashboard:home' %}" class="topbar-logo">
+      <span class="logo-mark">6el1</span>
+      <span class="logo-claim">· la grupeta de carretera</span>
+    </a>
+
+    {# Nav central — solo escritorio #}
+    {% with ns=request.resolver_match.app_name %}
+    <nav class="topbar-nav" aria-label="Navegación principal">
+      <a href="{% url 'dashboard:home' %}"
+         class="nav-item{% if ns == 'dashboard' %} active{% endif %}">Inicio</a>
+      <a href="{% url 'routes:list' %}"
+         class="nav-item{% if ns == 'routes' %} active{% endif %}">Rutas</a>
+      <a href="{% url 'events:list' %}"
+         class="nav-item{% if ns == 'events' %} active{% endif %}">Eventos</a>
+      <a href="{% url 'media_gallery:list' %}"
+         class="nav-item{% if ns == 'media_gallery' %} active{% endif %}">Galería</a>
+      <a href="{% url 'blog:list' %}"
+         class="nav-item{% if ns == 'blog' %} active{% endif %}">Blog</a>
+      <a href="{% url 'chat:room' %}"
+         class="nav-item{% if ns == 'chat' %} active{% endif %}">Chat</a>
+      <a href="{% url 'members:list' %}"
+         class="nav-item{% if ns == 'members' %} active{% endif %}">Miembros</a>
     </nav>
-    {% endif %}
+    {% endwith %}
 
-    {% if messages %}
-    <div class="max-w-7xl mx-auto px-4 mt-4 space-y-2">
-        {% for message in messages %}
-        <div class="p-3 rounded text-sm
-            {% if message.tags == 'success' %}bg-green-100 text-green-800
-            {% elif message.tags == 'error' %}bg-red-100 text-red-800
-            {% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800
-            {% else %}bg-blue-100 text-blue-800{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
+    {# Derecha: theme toggle + avatar #}
+    <div class="topbar-right">
+      <button class="online-pill"
+              onclick="window.toggleTheme()"
+              title="Cambiar tema claro/oscuro"
+              aria-label="Cambiar tema">
+        <span class="dot-online"></span>
+        <span id="theme-label">...</span>
+      </button>
+      <a href="{% url 'members:detail' request.user.pk %}"
+         class="avatar-topbar"
+         aria-label="Mi perfil">
+        {% if user.profile.photo %}
+          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.email }}">
+        {% else %}
+          {{ user.first_name|slice:":1"|upper|default:user.email|slice:":1"|upper }}
+        {% endif %}
+      </a>
     </div>
-    {% endif %}
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {% block content %}{% endblock %}
-    </main>
+  </div>
+</header>
+{% endif %}
 
-    <script>
-        const btn = document.getElementById('mobile-menu-btn');
-        const menu = document.getElementById('mobile-menu');
-        if (btn) btn.addEventListener('click', () => menu.classList.toggle('hidden'));
-    </script>
-    {% block extra_js %}{% endblock %}
+{# Mensajes flash de Django #}
+{% if messages %}
+<div class="messages-bar" role="alert" aria-live="polite">
+  {% for message in messages %}
+  <div class="message-item {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main class="main-content">
+  {% block content %}{% endblock %}
+</main>
+
+{# Barra inferior — solo móvil, solo autenticado #}
+{% if user.is_authenticated %}
+{% with ns=request.resolver_match.app_name %}
+<nav class="bottombar" aria-label="Navegación móvil">
+
+  <a href="{% url 'dashboard:home' %}"
+     class="bb-item{% if ns == 'dashboard' %} active{% endif %}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    <span>Inicio</span>
+  </a>
+
+  <a href="{% url 'routes:list' %}"
+     class="bb-item{% if ns == 'routes' %} active{% endif %}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <span>Rutas</span>
+  </a>
+
+  <a href="{% url 'media_gallery:list' %}"
+     class="bb-item{% if ns == 'media_gallery' %} active{% endif %}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <polyline points="21 15 16 10 5 21"/>
+    </svg>
+    <span>Galería</span>
+  </a>
+
+  <a href="{% url 'chat:room' %}"
+     class="bb-item{% if ns == 'chat' %} active{% endif %}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <span>Chat</span>
+  </a>
+
+  <a href="{% url 'members:list' %}"
+     class="bb-item{% if ns == 'members' %} active{% endif %}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    <span>Peña</span>
+  </a>
+
+</nav>
+{% endwith %}
+{% endif %}
+
+{# Actualiza la etiqueta del toggle tras el primer render #}
+<script>
+  (function () {
+    var label = document.getElementById('theme-label');
+    if (label) {
+      label.textContent = document.documentElement.classList.contains('dark') ? 'Oscuro' : 'Claro';
+    }
+  })();
+</script>
+
+{% block extra_js %}{% endblock %}
 </body>
 </html>

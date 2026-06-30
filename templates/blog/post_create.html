@@ -1,91 +1,82 @@
 {% extends 'base.html' %}
-{% block title %}Nuevo post — GrupetaWeb{% endblock %}
+{% block title %}Nuevo post{% endblock %}
 
 {% block extra_head %}
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <style>
-  /* Restore heading and list styles inside the Quill editor, overridden by Tailwind Preflight */
-  .ql-editor h1 { font-size: 2em; font-weight: bold; margin: .67em 0; }
-  .ql-editor h2 { font-size: 1.5em; font-weight: bold; margin: .75em 0; }
-  .ql-editor h3 { font-size: 1.17em; font-weight: bold; margin: .83em 0; }
-  .ql-editor ul { list-style: disc; padding-left: 1.5em; }
-  .ql-editor ol { list-style: decimal; padding-left: 1.5em; }
-  .ql-editor blockquote { border-left: 4px solid #ccc; padding-left: 1em; color: #666; }
+  .ql-toolbar { border-radius: var(--radius-md) var(--radius-md) 0 0 !important; border-color: var(--border) !important; background: var(--surface2); }
+  .ql-container { border-radius: 0 0 var(--radius-md) var(--radius-md) !important; border-color: var(--border) !important; background: var(--bg); font-family: var(--font-body); font-size: 14px; min-height: 200px; }
+  .ql-editor { color: var(--text); }
+  .ql-editor.ql-blank::before { color: var(--dim); font-style: normal; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto bg-white rounded-lg shadow p-8">
-    <h1 class="text-xl font-bold text-gray-900 mb-6">Escribir nuevo post</h1>
-    <form method="post" enctype="multipart/form-data" id="post-form" class="space-y-5">
-        {% csrf_token %}
+<div style="max-width:620px;margin:0 auto;">
+  <a href="{% url 'blog:list' %}"
+     style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
+    ← Blog
+  </a>
+  <div class="card" style="border-radius:var(--radius-xl);padding:24px;">
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);margin-bottom:20px;">Nuevo post</h1>
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.title.label }}</label>
-            {{ form.title }}
-            {% if form.title.errors %}
-            <p class="text-red-600 text-xs mt-1">{{ form.title.errors.0 }}</p>
-            {% endif %}
-        </div>
+    <form method="post" enctype="multipart/form-data" id="post-form">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="form-group">
+        <label class="form-label" for="{{ field.auto_id }}">{{ field.label }}</label>
+        {% if field.html_name == 'content' %}
+        {# Quill editor reemplaza el textarea de content #}
+        <div id="quill-editor" style="min-height:200px;"></div>
+        <textarea name="{{ field.html_name }}" id="{{ field.auto_id }}"
+                  style="display:none;">{{ field.value|default:"" }}</textarea>
+        {% elif field.field.widget.input_type == 'file' %}
+        <input class="input" type="file" name="{{ field.html_name }}" id="{{ field.auto_id }}"
+               accept="image/*">
+        {% else %}
+        <input class="input" type="{{ field.field.widget.input_type }}"
+               name="{{ field.html_name }}" id="{{ field.auto_id }}"
+               {% if field.value %}value="{{ field.value }}"{% endif %}
+               placeholder="{{ field.label }}"
+               {% if field.field.required %}required{% endif %}>
+        {% endif %}
+        {% if field.errors %}
+        <p class="form-error">{{ field.errors.0 }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.content.label }}</label>
-            {{ form.content }}
-            <div id="quill-editor"
-                 class="border border-gray-300 rounded-b bg-white"
-                 style="min-height: 280px; font-size: 0.95rem;"></div>
-            {% if form.content.errors %}
-            <p class="text-red-600 text-xs mt-1">{{ form.content.errors.0 }}</p>
-            {% endif %}
-        </div>
-
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.header_image.label }}</label>
-            {{ form.header_image }}
-            {% if form.header_image.errors %}
-            <p class="text-red-600 text-xs mt-1">{{ form.header_image.errors.0 }}</p>
-            {% endif %}
-        </div>
-
-        <div class="flex space-x-3 pt-2">
-            <button type="submit"
-                    class="bg-gray-900 text-white px-6 py-2 rounded hover:bg-gray-700 text-sm">
-                Publicar
-            </button>
-            <a href="{% url 'blog:list' %}"
-               class="border border-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-50 text-sm">
-                Cancelar
-            </a>
-        </div>
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button type="submit" class="btn-primary" style="flex:1;">Publicar</button>
+        <a href="{% url 'blog:list' %}" class="btn-secondary">Cancelar</a>
+      </div>
     </form>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script>
-const quill = new Quill('#quill-editor', {
+  var quill = new Quill('#quill-editor', {
     theme: 'snow',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{'header': 2}, {'header': 3}],
-            [{'list': 'ordered'}, {'list': 'bullet'}],
-            ['link', 'blockquote'],
-            ['clean'],
-        ]
-    }
-});
+    placeholder: 'Escribe tu post aquí...',
+    modules: { toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'header': [2, 3, false] }],
+      ['blockquote', 'link'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['clean']
+    ]}
+  });
 
-const textarea = document.getElementById('id_content');
+  var existing = document.getElementById('id_content');
+  if (existing && existing.value) {
+    quill.root.innerHTML = existing.value;
+  }
 
-// Pre-populate editor after a validation error (Django re-renders the form with previous values)
-if (textarea.value) {
-    quill.clipboard.dangerouslyPasteHTML(textarea.value);
-}
-
-document.getElementById('post-form').addEventListener('submit', function () {
-    textarea.value = quill.root.innerHTML;
-});
+  document.getElementById('post-form').addEventListener('submit', function () {
+    existing.value = quill.root.innerHTML;
+  });
 </script>
 {% endblock %}

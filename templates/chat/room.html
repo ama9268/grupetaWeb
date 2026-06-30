@@ -1,136 +1,138 @@
 {% extends 'base.html' %}
-{% block title %}Chat — GrupetaWeb{% endblock %}
+{% block title %}Chat{% endblock %}
+
 {% block content %}
-<div class="max-w-3xl mx-auto flex flex-col h-[70vh]">
-    <h1 class="text-xl font-bold text-gray-900 mb-4">Chat del grupo</h1>
 
-    <div id="chat-messages"
-         class="flex-1 overflow-y-auto bg-white rounded-lg shadow p-4 space-y-3 mb-4">
+<div style="margin-bottom:16px;">
+  <h1 style="font-family:var(--font-title);font-weight:800;font-size:28px;letter-spacing:-.5px;color:var(--text);">Chat</h1>
+</div>
 
-        <div id="load-more-container" class="text-center hidden">
-            <button id="load-more-btn"
-                    class="text-sm text-gray-500 hover:text-gray-800 underline py-1">
-                Cargar mensajes anteriores
-            </button>
-        </div>
+<div style="border-radius:var(--radius-xl);border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;height:560px;max-height:80vh;">
 
-        <p id="connecting-msg" class="text-gray-400 text-sm text-center">Conectando...</p>
+  {# Cabecera de sala #}
+  <div style="height:66px;border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;">
+    <div style="width:38px;height:38px;border-radius:12px;background:var(--accent);color:var(--ac-text);display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-weight:800;font-size:16px;flex-shrink:0;">
+      6
     </div>
-
-    <div class="bg-white rounded-lg shadow p-3 flex space-x-3">
-        <input id="chat-input"
-               type="text"
-               placeholder="Escribe un mensaje..."
-               class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
-               maxlength="2000"
-               autocomplete="off">
-        <button id="chat-send"
-                class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">
-            Enviar
-        </button>
+    <div>
+      <div style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);">General</div>
+      <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);" id="chat-status">Conectando...</div>
     </div>
+    <div style="margin-left:auto;"><span class="dot-online"></span></div>
+  </div>
+
+  {# Área de mensajes #}
+  <div id="chat-messages"
+       style="flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;">
+    <div id="load-more-container" style="text-align:center;display:none;">
+      <button id="load-more-btn"
+              style="background:none;border:1px solid var(--border);cursor:pointer;font-family:var(--font-body);font-size:12px;color:var(--dim);padding:6px 14px;border-radius:var(--radius-pill);">
+        Cargar mensajes anteriores
+      </button>
+    </div>
+  </div>
+
+  {# Input #}
+  <div style="border-top:1px solid var(--border);padding:13px 16px;flex-shrink:0;display:flex;align-items:center;gap:10px;">
+    <input id="chat-input"
+           type="text"
+           placeholder="Escribe un mensaje..."
+           maxlength="2000"
+           autocomplete="off"
+           style="flex:1;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;padding:0 13px;outline:none;transition:border-color .15s ease;"
+           onfocus="this.style.borderColor='var(--accent)'"
+           onblur="this.style.borderColor='var(--border)'">
+    <button id="chat-send"
+            style="width:42px;height:42px;border-radius:13px;border:none;background:var(--accent);color:var(--ac-text);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:filter .15s ease;"
+            onmouseenter="this.style.filter='brightness(1.08)'"
+            onmouseleave="this.style.filter='none'"
+            aria-label="Enviar">↑</button>
+  </div>
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const currentUser = '{{ request.user.get_full_name|default:request.user.email|escapejs }}';
-const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-const ws = new WebSocket(wsProtocol + window.location.host + '/ws/chat/');
+(function () {
+  var currentUser = '{{ request.user.get_full_name|default:request.user.email|escapejs }}';
+  var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+  var ws = new WebSocket(wsProtocol + window.location.host + '/ws/chat/');
 
-const messagesDiv = document.getElementById('chat-messages');
-const loadMoreContainer = document.getElementById('load-more-container');
-const loadMoreBtn = document.getElementById('load-more-btn');
-const connectingMsg = document.getElementById('connecting-msg');
-const input = document.getElementById('chat-input');
+  var messagesDiv = document.getElementById('chat-messages');
+  var loadMoreContainer = document.getElementById('load-more-container');
+  var loadMoreBtn = document.getElementById('load-more-btn');
+  var statusEl = document.getElementById('chat-status');
+  var input = document.getElementById('chat-input');
+  var oldestId = null;
 
-let oldestId = null;
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
 
-function escapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function buildMessageEl(msg) {
-    const isOwn = msg.user === currentUser;
-    const div = document.createElement('div');
-    div.className = 'flex ' + (isOwn ? 'justify-end' : 'justify-start');
+  function buildMessageEl(msg) {
+    var isOwn = msg.user === currentUser;
+    var div = document.createElement('div');
     div.dataset.msgId = msg.id;
-    div.innerHTML = `
-        <div class="max-w-[75%] ${isOwn ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} rounded-lg px-3 py-2">
-            ${!isOwn ? `<p class="text-xs font-semibold mb-1 opacity-70">${escapeHtml(msg.user)}</p>` : ''}
-            <p class="text-sm">${escapeHtml(msg.content)}</p>
-            <p class="text-xs opacity-50 mt-1 text-right">${msg.timestamp}</p>
-        </div>`;
+    div.style.cssText = 'display:flex;align-items:flex-end;gap:8px;' + (isOwn ? 'flex-direction:row-reverse;' : '');
+    var initials = msg.user.charAt(0).toUpperCase();
+    var bubbleBg = isOwn ? 'var(--accent-soft)' : 'var(--surface2)';
+    div.innerHTML =
+      '<div style="width:30px;height:30px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-weight:800;font-size:11px;color:var(--text);flex-shrink:0;">' + escapeHtml(initials) + '</div>' +
+      '<div style="max-width:75%;background:' + bubbleBg + ';border:1px solid var(--border);border-radius:14px;padding:9px 13px;">' +
+        (!isOwn ? '<div style="font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px;">' + escapeHtml(msg.user) + '</div>' : '') +
+        '<div style="font-family:var(--font-body);font-size:14px;line-height:1.5;color:var(--text);">' + escapeHtml(msg.content) + '</div>' +
+        '<div style="font-family:var(--font-body);font-size:10px;color:var(--dim);margin-top:4px;text-align:right;">' + escapeHtml(msg.timestamp) + '</div>' +
+      '</div>';
     return div;
-}
+  }
 
-function appendMessage(msg) {
-    messagesDiv.appendChild(buildMessageEl(msg));
-    if (oldestId === null || msg.id < oldestId) oldestId = msg.id;
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
+  ws.onopen = function () { statusEl.textContent = 'Sala general · en línea'; };
+  ws.onclose = function () { statusEl.textContent = 'Desconectado · recarga la página'; statusEl.style.color = 'var(--error)'; };
 
-function prependMessages(msgs) {
-    const prevHeight = messagesDiv.scrollHeight;
-    // Insert after the load-more button, before the first real message
-    const anchor = loadMoreContainer.nextSibling;
-    msgs.forEach(msg => {
+  ws.onmessage = function (event) {
+    var data = JSON.parse(event.data);
+    if (data.type === 'history') {
+      data.messages.forEach(function (msg) {
+        if (oldestId === null || msg.id < oldestId) oldestId = msg.id;
+        messagesDiv.appendChild(buildMessageEl(msg));
+      });
+      loadMoreContainer.style.display = data.has_more ? 'block' : 'none';
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } else if (data.type === 'message') {
+      if (oldestId === null || data.message.id < oldestId) oldestId = data.message.id;
+      messagesDiv.appendChild(buildMessageEl(data.message));
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } else if (data.type === 'older_messages') {
+      var prevH = messagesDiv.scrollHeight;
+      var anchor = loadMoreContainer.nextSibling;
+      data.messages.forEach(function (msg) {
         if (oldestId === null || msg.id < oldestId) oldestId = msg.id;
         messagesDiv.insertBefore(buildMessageEl(msg), anchor);
-    });
-    // Keep scroll position stable
-    messagesDiv.scrollTop = messagesDiv.scrollHeight - prevHeight;
-}
-
-ws.onopen = () => {
-    connectingMsg && connectingMsg.remove();
-};
-
-ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === 'history') {
-        connectingMsg && connectingMsg.remove();
-        data.messages.forEach(msg => {
-            if (oldestId === null || msg.id < oldestId) oldestId = msg.id;
-            messagesDiv.appendChild(buildMessageEl(msg));
-        });
-        loadMoreContainer.classList.toggle('hidden', !data.has_more);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-    } else if (data.type === 'message') {
-        appendMessage(data.message);
-
-    } else if (data.type === 'older_messages') {
-        prependMessages(data.messages);
-        loadMoreContainer.classList.toggle('hidden', !data.has_more);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight - prevH;
+      loadMoreContainer.style.display = data.has_more ? 'block' : 'none';
     }
-};
+  };
 
-ws.onclose = () => {
-    const p = document.createElement('p');
-    p.className = 'text-red-500 text-sm text-center py-2';
-    p.textContent = 'Conexión cerrada. Recarga la página.';
-    messagesDiv.appendChild(p);
-};
-
-loadMoreBtn.addEventListener('click', () => {
+  loadMoreBtn.addEventListener('click', function () {
     if (oldestId !== null && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({type: 'load_more', before_id: oldestId}));
+      ws.send(JSON.stringify({ type: 'load_more', before_id: oldestId }));
     }
-});
+  });
 
-function sendMessage() {
-    const content = input.value.trim();
+  function sendMessage() {
+    var content = input.value.trim();
     if (content && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({content}));
-        input.value = '';
+      ws.send(JSON.stringify({ content: content }));
+      input.value = '';
     }
-}
+  }
 
-document.getElementById('chat-send').addEventListener('click', sendMessage);
-input.addEventListener('keydown', (e) => {
+  document.getElementById('chat-send').addEventListener('click', sendMessage);
+  input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-});
+  });
+})();
 </script>
 {% endblock %}

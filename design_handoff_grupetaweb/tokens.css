@@ -1,0 +1,240 @@
+/*
+  GrupetaWeb · 6el1 — Design Tokens
+  Copiar en: static/css/main.css (o variables.css)
+  Uso: aplica clase "dark" en <html> para el modo oscuro.
+       Por defecto (sin clase) = modo claro.
+*/
+
+/* ===================== MODO CLARO (por defecto) ===================== */
+:root {
+  /* Colores base */
+  --bg:           #f7f3ec;
+  --surface:      #ffffff;
+  --surface2:     #f1ebe0;
+  --border:       #e8e0d2;
+  --text:         #15171b;
+  --dim:          #867a66;
+
+  /* Acento (ámbar, carretera) */
+  --accent:       #e0921f;
+  --ac-text:      #2a1d05;
+  --accent-soft:  rgba(224, 146, 31, 0.14);
+
+  /* Estado */
+  --online:       #34c759;
+  --error:        #ff453a;
+
+  /* Sombras */
+  --shadow-sm:    0 4px 12px rgba(120, 90, 40, 0.08);
+  --shadow-md:    0 16px 40px rgba(120, 90, 40, 0.12);
+}
+
+/* ===================== MODO OSCURO ===================== */
+html.dark {
+  --bg:           #100e0b;
+  --surface:      #1b1813;
+  --surface2:     #241f17;
+  --border:       #332c20;
+  --text:         #f3f4f6;
+  --dim:          #a59885;
+
+  --accent:       #f2a93c;
+  --ac-text:      #2a1d05;
+  --accent-soft:  rgba(242, 169, 60, 0.16);
+
+  --online:       #34c759;
+  --error:        #ff453a;
+
+  --shadow-sm:    0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-md:    0 16px 40px rgba(0, 0, 0, 0.50);
+}
+
+/* ===================== TIPOGRAFÍA ===================== */
+/*
+  Importar en <head> antes de cualquier CSS:
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800
+    &family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800
+    &family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+*/
+
+:root {
+  --font-body:   'Hanken Grotesk', system-ui, sans-serif;
+  --font-title:  'Bricolage Grotesque', system-ui, sans-serif;
+  --font-mono:   'IBM Plex Mono', 'Fira Mono', monospace;
+}
+
+/* ===================== ESPACIADO ===================== */
+:root {
+  --radius-sm:   9px;   /* botones pequeños, badges */
+  --radius-md:   12px;  /* inputs, botones */
+  --radius-lg:   16px;  /* tarjetas estándar */
+  --radius-xl:   18px;  /* tarjetas grandes, hero */
+  --radius-pill: 20px;  /* chips, pills de nav */
+  --radius-full: 9999px;
+
+  --gap-sm:      10px;
+  --gap-md:      14px;
+  --gap-lg:      18px;
+  --gap-xl:      22px;
+}
+
+/* ===================== RESET MÍNIMO ===================== */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  transition: background 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+button { cursor: pointer; }
+
+/* Transición global para el tema */
+body, .card, nav, header, footer, aside, main,
+[class*="surface"], [class*="border"] {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* ===================== UTILIDADES ===================== */
+
+/* Botón primario */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--accent);
+  color: var(--ac-text);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+
+/* Botón secundario */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.btn-secondary:hover { background: var(--surface2); }
+
+/* Tarjeta */
+.card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 16px 18px;
+}
+
+/* Input */
+.input {
+  width: 100%;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 13px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.input:focus { border-color: var(--accent); }
+.input::placeholder { color: var(--dim); }
+
+/* Avatar */
+.avatar {
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-title);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* Chip / pill */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--dim);
+}
+.chip.active {
+  background: var(--accent);
+  color: var(--ac-text);
+  border-color: transparent;
+}
+
+/* Badge rol */
+.role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--dim);
+}
+.role-badge.accent {
+  background: var(--accent);
+  color: var(--ac-text);
+  border-color: transparent;
+}
+
+/* Dot de estado */
+.dot-online {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--online);
+  display: inline-block;
+}
+
+/* ===================== SCROLLBAR ===================== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(150, 130, 100, 0.35);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 130, 100, 0.55);
+}
+
+/* ===================== SELECCIÓN ===================== */
+::selection {
+  background: rgba(242, 169, 60, 0.32);
+}

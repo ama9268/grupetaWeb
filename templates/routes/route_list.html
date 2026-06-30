@@ -1,50 +1,88 @@
 {% extends 'base.html' %}
-{% block title %}Rutas — GrupetaWeb{% endblock %}
+{% block title %}Rutas{% endblock %}
+
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Rutas</h1>
-    <a href="{% url 'routes:create' %}"
-       class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">
-        + Nueva ruta
-    </a>
+
+{# Cabecera #}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px;">
+  <div>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:30px;letter-spacing:-.6px;color:var(--text);">Rutas</h1>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">Trazados publicados por la peña</p>
+  </div>
+  <a href="{% url 'routes:create' %}" class="btn-primary">+ Subir GPX</a>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {% for route in routes %}
-    <a href="{% url 'routes:detail' route.pk %}"
-       class="block bg-white rounded-lg shadow hover:shadow-md transition p-5">
-        <h2 class="font-semibold text-gray-900 truncate">{{ route.title }}</h2>
-        <p class="text-xs text-gray-500 mt-1">{{ route.author.get_full_name|default:route.author.email }}</p>
-        <div class="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
-            <div>
-                <p class="font-bold text-gray-900">{{ route.distance_km|default:"—" }}</p>
-                <p class="text-xs text-gray-500">km</p>
-            </div>
-            <div>
-                <p class="font-bold text-gray-900">+{{ route.elevation_gain_m|default:"—" }}</p>
-                <p class="text-xs text-gray-500">m+</p>
-            </div>
-            <div>
-                <p class="font-bold text-gray-900">-{{ route.elevation_loss_m|default:"—" }}</p>
-                <p class="text-xs text-gray-500">m-</p>
-            </div>
+{# Grid de tarjetas #}
+{% if routes %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">
+  {% for route in routes %}
+  <a href="{% url 'routes:detail' route.pk %}"
+     style="display:block;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);overflow:hidden;text-decoration:none;transition:box-shadow .2s ease;"
+     onmouseenter="this.style.boxShadow='var(--shadow-md)'"
+     onmouseleave="this.style.boxShadow='none'">
+
+    {# Mapa placeholder / miniatura #}
+    <div style="aspect-ratio:16/9;background:var(--bg);position:relative;display:flex;align-items:center;justify-content:center;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      {# Badge dificultad #}
+      {% if route.elevation_gain_m %}
+      <div style="position:absolute;top:10px;left:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);padding:4px 10px;font-family:var(--font-body);font-weight:600;font-size:11px;color:var(--dim);">
+        {% if route.elevation_gain_m >= 1500 %}Dura
+        {% elif route.elevation_gain_m >= 700 %}Media
+        {% else %}Suave{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    {# Info #}
+    <div style="padding:14px 16px;">
+      <div style="font-family:var(--font-title);font-weight:800;font-size:17px;color:var(--text);letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ route.title }}</div>
+      <div style="font-family:var(--font-body);font-size:13px;color:var(--dim);margin-top:4px;">
+        {{ route.distance_km|default:"—" }} km
+        {% if route.elevation_gain_m %} · +{{ route.elevation_gain_m }} m{% endif %}
+      </div>
+
+      {# Pie #}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:11px;border-top:1px solid var(--border);">
+        <div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0;">
+          {{ route.author.first_name|slice:":1"|upper|default:route.author.email|slice:":1"|upper }}
         </div>
-        <p class="text-xs text-gray-400 mt-3">{{ route.created_at|date:"d/m/Y" }}</p>
-    </a>
-    {% empty %}
-    <p class="col-span-full text-gray-500 text-center py-12">No hay rutas todavía. ¡Sube la primera!</p>
-    {% endfor %}
+        <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          {{ route.author.get_full_name|default:route.author.email }}
+        </span>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim);flex-shrink:0;">{{ route.created_at|date:"d/m/Y" }}</span>
+      </div>
+    </div>
+
+  </a>
+  {% endfor %}
 </div>
 
+{# Paginación #}
 {% if is_paginated %}
-<div class="mt-8 flex justify-center space-x-2">
-    {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded text-sm">Anterior</a>
-    {% endif %}
-    <span class="px-3 py-1 text-sm text-gray-600">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded text-sm">Siguiente</a>
-    {% endif %}
+<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:28px;">
+  {% if page_obj.has_previous %}
+  <a href="?page={{ page_obj.previous_page_number }}" class="btn-secondary" style="padding:8px 16px;font-size:13px;">← Anterior</a>
+  {% endif %}
+  <span style="font-family:var(--font-mono);font-size:12px;color:var(--dim);">
+    {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+  </span>
+  {% if page_obj.has_next %}
+  <a href="?page={{ page_obj.next_page_number }}" class="btn-secondary" style="padding:8px 16px;font-size:13px;">Siguiente →</a>
+  {% endif %}
 </div>
 {% endif %}
+
+{% else %}
+<div style="text-align:center;padding:64px 20px;">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);margin:0 auto 16px;">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+  <p style="font-family:var(--font-body);font-size:15px;color:var(--dim);margin-bottom:16px;">No hay rutas todavía. ¡Sube la primera!</p>
+  <a href="{% url 'routes:create' %}" class="btn-primary">+ Subir GPX</a>
+</div>
+{% endif %}
+
 {% endblock %}

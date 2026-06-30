@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;}
+body{margin:0;}
+a{color:inherit;text-decoration:none;}
+[data-appmain]::-webkit-scrollbar{width:8px;height:8px;}
+[data-appmain]::-webkit-scrollbar-thumb{background:rgba(150,130,100,.35);border-radius:8px;}
+::selection{background:rgba(242,169,60,.32);}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="{{ vars }}">
+<div style="min-height:100vh; background:var(--bg,#100e0b); color:var(--text,#f3f4f6); font-family:'Hanken Grotesk',system-ui,sans-serif; transition:background .25s ease, color .25s ease;">
+
+  <!-- ============ PROTOTYPE CONTROLS ============ -->
+  <div style="position:sticky; top:0; z-index:80; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:11px 22px; background:var(--surface,#1b1813); border-bottom:1px solid var(--border,#332c20);">
+    <div style="display:flex; align-items:baseline; gap:10px; min-width:0;">
+      <span style="font:800 17px 'Bricolage Grotesque'; letter-spacing:-.3px;">Prototipo 6el1</span>
+      <span style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">estilo 1C · todas las pantallas</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <select value="{{ screen }}" onChange="{{ onPick }}" style="appearance:none; background:var(--bg,#100e0b); color:var(--text,#f3f4f6); border:1px solid var(--border,#332c20); border-radius:9px; padding:8px 12px; font:600 13px 'Hanken Grotesk'; cursor:pointer;">
+        <option value="dashboard">Inicio (dashboard)</option>
+        <option value="rutas">Rutas · listado</option>
+        <option value="ruta">Ruta · detalle</option>
+        <option value="eventos">Eventos · listado</option>
+        <option value="evento">Evento · detalle</option>
+        <option value="galeria">Galería</option>
+        <option value="album">Álbum</option>
+        <option value="blog">Blog · listado</option>
+        <option value="post">Post · detalle</option>
+        <option value="chat">Chat</option>
+        <option value="miembros">Miembros</option>
+        <option value="perfil">Perfil</option>
+        <option value="moderacion">Moderación</option>
+        <option value="auth">Acceso / Registro</option>
+      </select>
+      <div style="display:flex; gap:3px; padding:3px; background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); border-radius:10px;">
+        <span onClick="{{ goDesktop }}" style="cursor:pointer; font:600 12px 'Hanken Grotesk'; padding:6px 12px; border-radius:7px; color:{{ deskColor }}; background:{{ deskBg }};">Escritorio</span>
+        <span onClick="{{ goMobile }}" style="cursor:pointer; font:600 12px 'Hanken Grotesk'; padding:6px 12px; border-radius:7px; color:{{ mobColor }}; background:{{ mobBg }};">Móvil</span>
+      </div>
+      <button onClick="{{ toggleTheme }}" style="display:inline-flex; align-items:center; gap:7px; padding:7px 13px; border-radius:9px; border:1px solid var(--border,#332c20); background:var(--bg,#100e0b); color:var(--text,#f3f4f6); font:600 13px 'Hanken Grotesk'; cursor:pointer;">
+        <span style="width:13px; height:13px; border-radius:50%; border:1.5px solid currentColor; background:linear-gradient(90deg, currentColor 0 50%, transparent 50% 100%); display:inline-block;"></span>
+        {{ themeLabel }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ DEVICE FRAME ============ -->
+  <div style="padding:26px 24px 60px; display:flex; justify-content:center;">
+    <div style="{{ frameBox }}">
+      <div style="{{ innerScreen }}">
+
+        <!-- chrome -->
+        <sc-if value="{{ desktop }}" hint-placeholder-val="{{ true }}">
+          <div style="height:38px; display:flex; align-items:center; gap:8px; padding:0 14px; background:var(--surface2,#241f17); border-bottom:1px solid var(--border,#332c20); flex:0 0 auto;">
+            <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57;"></span>
+            <span style="width:11px;height:11px;border-radius:50%;background:#febc2e;"></span>
+            <span style="width:11px;height:11px;border-radius:50%;background:#28c840;"></span>
+            <div style="margin-left:14px; flex:1; max-width:360px; height:24px; border-radius:7px; background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); display:flex; align-items:center; padding:0 12px; font:11px 'IBM Plex Mono'; color:var(--dim,#a59885);">6el1.cc/{{ urlPath }}</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ mobile }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 22px 6px; font:700 13px 'Hanken Grotesk'; color:var(--text,#f3f4f6); background:var(--bg,#100e0b); flex:0 0 auto;">
+            <span>9:41</span>
+            <span style="display:flex; align-items:center; gap:6px;"><span style="font:700 11px 'Hanken Grotesk';">5G</span><span style="width:22px;height:11px;border:1.5px solid currentColor;border-radius:3px;position:relative;display:inline-block;"><span style="position:absolute;inset:2px;background:currentColor;border-radius:1px;"></span></span></span>
+          </div>
+        </sc-if>
+
+        <!-- top bar (app) -->
+        <sc-if value="{{ notAuth }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:13px 20px; border-bottom:1px solid var(--border,#332c20); background:var(--surface,#1b1813); flex:0 0 auto;">
+            <div style="display:flex; align-items:baseline; gap:9px;">
+              <span onClick="{{ act.dashboard }}" style="cursor:pointer; font:800 22px 'Bricolage Grotesque'; letter-spacing:-.5px;">6el1</span>
+              <sc-if value="{{ desktop }}" hint-placeholder-val="{{ true }}"><span style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">la grupeta de carretera</span></sc-if>
+            </div>
+            <sc-if value="{{ desktop }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; gap:3px; flex-wrap:wrap; justify-content:center;">
+                <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
+                  <span onClick="{{ n.onClick }}" style="cursor:pointer; font:600 13px 'Hanken Grotesk'; color:{{ n.color }}; background:{{ n.bg }}; padding:7px 13px; border-radius:20px;">{{ n.label }}</span>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div style="display:flex; align-items:center; gap:9px; flex:0 0 auto;">
+              <div style="display:flex; align-items:center; gap:6px; background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); border-radius:20px; padding:6px 12px;">
+                <span style="width:7px;height:7px;border-radius:50%; background:#34c759;"></span>
+                <span style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">41 en línea</span>
+              </div>
+              <span onClick="{{ act.perfil }}" style="cursor:pointer; width:36px;height:36px;border-radius:50%; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center;font:700 14px 'Bricolage Grotesque';">N</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- main -->
+        <div data-appmain style="{{ appMain }}">
+          <div style="width:100%; max-width:1080px; margin:0 auto; padding:24px 22px 40px;">
+
+            <!-- ===== DASHBOARD ===== -->
+            <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px; align-items:stretch; margin-bottom:22px;">
+                <div style="display:flex; flex-direction:column; justify-content:center; padding:6px 0;">
+                  <div style="font:800 38px 'Bricolage Grotesque'; letter-spacing:-1px; line-height:1.05;">Buenas, Nando 👋</div>
+                  <div style="font:500 16px 'Hanken Grotesk'; color:var(--dim,#a59885); margin:13px 0 20px; max-width:420px; line-height:1.5;">El domingo toca la Morcuera. ¿Te apuntas a sufrir un rato y rematar con cañas?</div>
+                  <div style="display:flex; align-items:center; gap:11px; flex-wrap:wrap;">
+                    <span onClick="{{ act.evento }}" style="cursor:pointer; font:700 15px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:12px 24px; border-radius:14px;">Sí, voy</span>
+                    <span onClick="{{ act.ruta }}" style="cursor:pointer; font:700 15px 'Hanken Grotesk'; color:var(--text,#f3f4f6); background:var(--surface,#1b1813); border:1px solid var(--border,#332c20); padding:12px 22px; border-radius:14px;">Ver la ruta</span>
+                    <span style="font:600 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">ya van 18</span>
+                  </div>
+                </div>
+                <div onClick="{{ act.evento }}" style="cursor:pointer; border-radius:18px; overflow:hidden; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813);">
+                  <div style="aspect-ratio:16/8; background:repeating-linear-gradient(135deg, var(--surface2,#241f17) 0 11px, transparent 11px 22px), var(--bg,#100e0b); position:relative;">
+                    <span style="position:absolute; left:14px; bottom:12px; font:700 11px 'IBM Plex Mono'; color:var(--dim,#a59885);">foto · cima de la morcuera</span>
+                    <span style="position:absolute; top:14px; left:14px; background:var(--accent,#f2a93c); color:var(--ac-text,#2a1d05); border-radius:11px; padding:7px 11px; text-align:center;"><span style="display:block; font:700 9px 'IBM Plex Mono';">DOM</span><span style="display:block; font:800 19px 'Bricolage Grotesque'; line-height:1;">05</span><span style="display:block; font:700 9px 'IBM Plex Mono';">JUL</span></span>
+                  </div>
+                  <div style="padding:16px 18px;">
+                    <div style="font:800 19px 'Bricolage Grotesque';">Ruta larga: Puerto de la Morcuera</div>
+                    <div style="font:500 13px 'Hanken Grotesk'; color:var(--dim,#a59885); margin:5px 0 13px;">08:00 · 92 km · 1.450 m+ · salida desde la plaza</div>
+                    <div style="display:flex; align-items:center;">
+                      <div style="display:flex; padding-left:8px;">
+                        <span style="width:30px;height:30px;border-radius:50%; margin-left:-8px; background:var(--surface2,#241f17); border:2px solid var(--surface,#1b1813); display:flex;align-items:center;justify-content:center; font:700 12px 'Bricolage Grotesque';">C</span>
+                        <span style="width:30px;height:30px;border-radius:50%; margin-left:-8px; background:var(--surface2,#241f17); border:2px solid var(--surface,#1b1813); display:flex;align-items:center;justify-content:center; font:700 12px 'Bricolage Grotesque';">E</span>
+                        <span style="width:30px;height:30px;border-radius:50%; margin-left:-8px; background:var(--surface2,#241f17); border:2px solid var(--surface,#1b1813); display:flex;align-items:center;justify-content:center; font:700 12px 'Bricolage Grotesque';">B</span>
+                        <span style="width:30px;height:30px;border-radius:50%; margin-left:-8px; background:var(--surface2,#241f17); border:2px solid var(--surface,#1b1813); display:flex;align-items:center;justify-content:center; font:700 12px 'Bricolage Grotesque';">T</span>
+                      </div>
+                      <span style="margin-left:8px; font:600 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">18 confirmados</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:13px; margin-bottom:24px;">
+                <sc-for list="{{ statsClub }}" as="x" hint-placeholder-count="4">
+                  <div style="border-radius:16px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:16px 18px;">
+                    <div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ x.label }}</div>
+                    <div style="display:flex; align-items:baseline; gap:5px; margin-top:7px;"><span style="font:800 28px 'Bricolage Grotesque'; letter-spacing:-.5px;">{{ x.val }}</span><span style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ x.unit }}</span></div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display:flex; flex-wrap:wrap; gap:20px;">
+                <div style="flex:1 1 360px; min-width:0;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                    <span style="font:800 18px 'Bricolage Grotesque';">Lo último de la peña</span>
+                    <span onClick="{{ act.galeria }}" style="cursor:pointer; font:600 13px 'Hanken Grotesk'; color:var(--accent,#f2a93c);">Galería →</span>
+                  </div>
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); grid-auto-rows:100px; gap:10px;">
+                    <sc-for list="{{ media }}" as="m" hint-placeholder-count="6">
+                      <div onClick="{{ act.album }}" style="cursor:pointer; border-radius:14px; border:1px solid var(--border,#332c20); background:repeating-linear-gradient(135deg, var(--surface2,#241f17) 0 10px, transparent 10px 20px), var(--bg,#100e0b); display:flex; align-items:flex-end; padding:9px;">
+                        <span style="font:500 10px 'IBM Plex Mono'; color:var(--dim,#a59885);">{{ m.label }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="flex:1 1 280px; min-width:0;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                    <span style="font:800 18px 'Bricolage Grotesque';">Pódium del mes</span>
+                    <span onClick="{{ act.miembros }}" style="cursor:pointer; font:600 13px 'Hanken Grotesk'; color:var(--accent,#f2a93c);">Ranking →</span>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:10px;">
+                    <sc-for list="{{ podium }}" as="p" hint-placeholder-count="3">
+                      <div style="display:flex; align-items:center; gap:13px; border-radius:14px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:12px 15px;">
+                        <span style="width:30px;height:30px;border-radius:50%; flex:0 0 auto; background:{{ p.badgeBg }}; color:{{ p.badgeColor }}; display:flex;align-items:center;justify-content:center; font:800 14px 'Bricolage Grotesque';">{{ p.pos }}</span>
+                        <span style="flex:1; font:700 15px 'Hanken Grotesk';">{{ p.name }}</span>
+                        <span style="font:700 14px 'Bricolage Grotesque'; color:var(--dim,#a59885);">{{ p.km }} km</span>
+                      </div>
+                    </sc-for>
+                    <div style="margin-top:6px;">
+                      <div style="font:700 14px 'Hanken Grotesk'; margin-bottom:9px;">Del blog</div>
+                      <sc-for list="{{ blog }}" as="b" hint-placeholder-count="3">
+                        <div onClick="{{ act.post }}" style="cursor:pointer; display:flex; align-items:center; gap:11px; padding:9px 0; border-top:1px solid var(--border,#332c20);">
+                          <span style="width:28px;height:28px;border-radius:50%; flex:0 0 auto; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 11px 'Bricolage Grotesque';">{{ b.init }}</span>
+                          <div style="flex:1; min-width:0;">
+                            <div style="font:600 13px 'Hanken Grotesk'; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ b.title }}</div>
+                            <div style="font:500 11px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ b.author }} · {{ b.when }}</div>
+                          </div>
+                          <span style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">♥ {{ b.likes }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- ===== RUTAS (listado) ===== -->
+            <sc-if value="{{ isRutas }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px;">
+                <div>
+                  <div style="font:800 30px 'Bricolage Grotesque'; letter-spacing:-.6px;">Rutas</div>
+                  <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:3px;">Trazados GPX que ha subido la peña</div>
+                </div>
+                <span style="cursor:pointer; font:700 14px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:11px 18px; border-radius:13px;">+ Subir GPX</span>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
+                <span style="font:600 12px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:7px 14px; border-radius:20px;">Todas</span>
+                <span style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); background:var(--surface,#1b1813); border:1px solid var(--border,#332c20); padding:7px 14px; border-radius:20px;">Carretera</span>
+                <span style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); background:var(--surface,#1b1813); border:1px solid var(--border,#332c20); padding:7px 14px; border-radius:20px;">Gravel</span>
+                <span style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); background:var(--surface,#1b1813); border:1px solid var(--border,#332c20); padding:7px 14px; border-radius:20px;">Más duras</span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:16px;">
+                <sc-for list="{{ routes }}" as="r" hint-placeholder-count="4">
+                  <div onClick="{{ act.ruta }}" style="cursor:pointer; border-radius:16px; overflow:hidden; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813);">
+                    <div style="aspect-ratio:16/9; background:repeating-linear-gradient(125deg, var(--surface2,#241f17) 0 9px, transparent 9px 18px), var(--bg,#100e0b); position:relative;">
+                      <span style="position:absolute; top:11px; left:11px; font:600 11px 'Hanken Grotesk'; color:var(--text,#f3f4f6); background:var(--surface,#1b1813); border:1px solid var(--border,#332c20); padding:4px 10px; border-radius:18px;">{{ r.tag }}</span>
+                      <span style="position:absolute; bottom:10px; left:11px; font:600 10px 'IBM Plex Mono'; color:var(--dim,#a59885);">mapa · trazado GPX</span>
+                    </div>
+                    <div style="padding:14px 16px;">
+                      <div style="font:800 17px 'Bricolage Grotesque'; margin-bottom:9px;">{{ r.name }}</div>
+                      <div style="display:flex; gap:14px; margin-bottom:12px;">
+                        <span style="font:600 13px 'Hanken Grotesk';">{{ r.km }} <span style="color:var(--dim,#a59885); font-weight:500;">km</span></span>
+                        <span style="font:600 13px 'Hanken Grotesk';">{{ r.up }} <span style="color:var(--dim,#a59885); font-weight:500;">m+</span></span>
+                        <span style="font:600 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ r.surface }}</span>
+                      </div>
+                      <div style="display:flex; align-items:center; gap:8px; border-top:1px solid var(--border,#332c20); padding-top:11px;">
+                        <span style="width:24px;height:24px;border-radius:50%; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 10px 'Bricolage Grotesque';">{{ r.init }}</span>
+                        <span style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ r.author }} · {{ r.date }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <!-- ===== RUTA (detalle) ===== -->
+            <sc-if value="{{ isRuta }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;">
+                <span onClick="{{ act.rutas }}" style="cursor:pointer; font:600 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">← Rutas</span>
+              </div>
+              <div style="font:800 32px 'Bricolage Grotesque'; letter-spacing:-.7px;">Puerto de la Morcuera</div>
+              <div style="display:flex; align-items:center; gap:9px; margin:8px 0 18px;">
+                <span style="width:26px;height:26px;border-radius:50%; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 11px 'Bricolage Grotesque';">C</span>
+                <span style="font:500 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">Subida por Cova · actualizada el 5 jul · Carretera</span>
+              </div>
+              <div style="border-radius:18px; overflow:hidden; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); margin-bottom:16px;">
+                <div style="aspect-ratio:21/9; background:repeating-linear-gradient(120deg, var(--surface2,#241f17) 0 12px, transparent 12px 24px), radial-gradient(circle at 30% 60%, var(--accent-soft,rgba(242,169,60,.16)), transparent 60%), var(--bg,#100e0b); position:relative;">
+                  <span style="position:absolute; top:14px; left:14px; font:600 11px 'IBM Plex Mono'; color:var(--dim,#a59885); background:var(--surface,#1b1813); border:1px solid var(--border,#332c20); padding:6px 11px; border-radius:8px;">Leaflet · trazado del GPX</span>
+                  <span style="position:absolute; bottom:14px; right:14px; font:600 12px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:8px 14px; border-radius:10px;">Descargar GPX</span>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:12px; margin-bottom:18px;">
+                <div style="border-radius:14px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:15px;"><div style="font:500 11px 'Hanken Grotesk'; color:var(--dim,#a59885);">Distancia</div><div style="font:800 24px 'Bricolage Grotesque'; margin-top:5px;">92 <span style="font-size:14px; color:var(--dim,#a59885);">km</span></div></div>
+                <div style="border-radius:14px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:15px;"><div style="font:500 11px 'Hanken Grotesk'; color:var(--dim,#a59885);">Desnivel +</div><div style="font:800 24px 'Bricolage Grotesque'; margin-top:5px;">1.450 <span style="font-size:14px; color:var(--dim,#a59885);">m</span></div></div>
+                <div style="border-radius:14px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:15px;"><div style="font:500 11px 'Hanken Grotesk'; color:var(--dim,#a59885);">Desnivel −</div><div style="font:800 24px 'Bricolage Grotesque'; margin-top:5px;">1.460 <span style="font-size:14px; color:var(--dim,#a59885);">m</span></div></div>
+                <div style="border-radius:14px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:15px;"><div style="font:500 11px 'Hanken Grotesk'; color:var(--dim,#a59885);">Cota máx.</div><div style="font:800 24px 'Bricolage Grotesque'; margin-top:5px;">1.796 <span style="font-size:14px; color:var(--dim,#a59885);">m</span></div></div>
+              </div>
+              <div style="border-radius:16px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:16px 18px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                  <span style="font:800 16px 'Bricolage Grotesque';">Perfil de elevación</span>
+                  <span style="font:500 11px 'IBM Plex Mono'; color:var(--dim,#a59885);">extraído del GPX</span>
+                </div>
+                <div style="height:120px; display:flex; align-items:flex-end; gap:3px;">
+                  <sc-for list="{{ elevation }}" as="h" hint-placeholder-count="28">
+                    <div style="flex:1; height:{{ h }}; background:linear-gradient(180deg, var(--accent,#f2a93c), var(--accent-soft,rgba(242,169,60,.16))); border-radius:3px 3px 0 0;"></div>
+                  </sc-for>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:8px; font:500 11px 'IBM Plex Mono'; color:var(--dim,#a59885);"><span>0 km</span><span>46 km</span><span>92 km</span></div>
+              </div>
+            </sc-if>
+
+            <!-- ===== EVENTOS (listado) ===== -->
+            <sc-if value="{{ isEventos }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px;">
+                <div>
+                  <div style="font:800 30px 'Bricolage Grotesque'; letter-spacing:-.6px;">Eventos</div>
+                  <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:3px;">Próximas salidas y quedadas de la peña</div>
+                </div>
+                <span style="cursor:pointer; font:700 14px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:11px 18px; border-radius:13px;">+ Crear evento</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:13px;">
+                <sc-for list="{{ events }}" as="ev" hint-placeholder-count="3">
+                  <div onClick="{{ act.evento }}" style="cursor:pointer; display:flex; align-items:center; gap:16px; flex-wrap:wrap; border-radius:16px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:15px 17px;">
+                    <div style="flex:0 0 auto; width:64px; text-align:center; background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); border-radius:13px; padding:10px 0;">
+                      <div style="font:700 10px 'IBM Plex Mono'; color:var(--accent,#f2a93c);">{{ ev.day }}</div>
+                      <div style="font:800 24px 'Bricolage Grotesque'; line-height:1;">{{ ev.d }}</div>
+                      <div style="font:700 10px 'IBM Plex Mono'; color:var(--dim,#a59885);">{{ ev.mon }}</div>
+                    </div>
+                    <div style="flex:1 1 200px; min-width:0;">
+                      <div style="font:800 17px 'Bricolage Grotesque'; margin-bottom:5px;">{{ ev.title }}</div>
+                      <div style="font:500 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ ev.time }} · {{ ev.km }} km · {{ ev.up }} m+ · {{ ev.tag }}</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                      <div style="display:flex; align-items:center; padding-left:8px;">
+                        <sc-for list="{{ ev.who3 }}" as="w" hint-placeholder-count="3">
+                          <span style="width:28px;height:28px;border-radius:50%; margin-left:-8px; background:var(--surface2,#241f17); border:2px solid var(--surface,#1b1813); display:flex;align-items:center;justify-content:center; font:700 11px 'Bricolage Grotesque';">{{ w }}</span>
+                        </sc-for>
+                        <span style="margin-left:7px; font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ ev.going }} van</span>
+                      </div>
+                      <span style="font:700 12px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:7px 18px; border-radius:9px;">Voy</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <!-- ===== EVENTO (detalle) ===== -->
+            <sc-if value="{{ isEvento }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;">
+                <span onClick="{{ act.eventos }}" style="cursor:pointer; font:600 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">← Eventos</span>
+              </div>
+              <div style="border-radius:18px; overflow:hidden; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); margin-bottom:18px;">
+                <div style="aspect-ratio:21/8; background:repeating-linear-gradient(135deg, var(--surface2,#241f17) 0 12px, transparent 12px 24px), var(--bg,#100e0b); position:relative;">
+                  <span style="position:absolute; top:16px; left:16px; background:var(--accent,#f2a93c); color:var(--ac-text,#2a1d05); border-radius:13px; padding:9px 13px; text-align:center;"><span style="display:block; font:700 10px 'IBM Plex Mono';">DOM</span><span style="display:block; font:800 24px 'Bricolage Grotesque'; line-height:1;">05</span><span style="display:block; font:700 10px 'IBM Plex Mono';">JUL</span></span>
+                </div>
+                <div style="padding:20px 22px;">
+                  <div style="font:800 28px 'Bricolage Grotesque'; letter-spacing:-.5px;">Ruta larga: Puerto de la Morcuera</div>
+                  <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); margin:7px 0 0;">Domingo 5 de julio · 08:00 · salida desde la plaza del pueblo</div>
+                </div>
+              </div>
+              <div style="display:flex; gap:18px; flex-wrap:wrap;">
+                <div style="flex:1 1 340px; min-width:0; display:flex; flex-direction:column; gap:16px;">
+                  <div style="border-radius:16px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:16px 18px;">
+                    <div style="font:800 16px 'Bricolage Grotesque'; margin-bottom:9px;">Sobre la salida</div>
+                    <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); line-height:1.6;">92 km con la subida completa a la Morcuera. Ritmo de grupo en el llano y cada uno a su aire en el puerto, reagrupamos arriba. Avituallamiento en el bar de siempre. Llevad chubasquero por si acaso.</div>
+                  </div>
+                  <div onClick="{{ act.ruta }}" style="cursor:pointer; display:flex; align-items:center; gap:14px; border-radius:16px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:14px 16px;">
+                    <div style="flex:0 0 auto; width:70px; height:54px; border-radius:11px; background:repeating-linear-gradient(120deg, var(--surface2,#241f17) 0 8px, transparent 8px 16px), var(--bg,#100e0b); border:1px solid var(--border,#332c20);"></div>
+                    <div style="flex:1; min-width:0;">
+                      <div style="font:500 11px 'Hanken Grotesk'; color:var(--dim,#a59885);">Ruta asociada</div>
+                      <div style="font:800 16px 'Bricolage Grotesque'; margin:2px 0 3px;">Puerto de la Morcuera</div>
+                      <div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">92 km · 1.450 m+</div>
+                    </div>
+                    <span style="font:600 13px 'Hanken Grotesk'; color:var(--accent,#f2a93c);">Ver →</span>
+                  </div>
+                  <div style="border-radius:16px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:16px 18px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                      <span style="font:800 16px 'Bricolage Grotesque';">Galería post-evento</span>
+                      <span style="font:600 12px 'Hanken Grotesk'; color:var(--accent,#f2a93c);">+ Subir fotos</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(90px,1fr)); grid-auto-rows:78px; gap:8px;">
+                      <sc-for list="{{ media }}" as="m" hint-placeholder-count="6">
+                        <div style="border-radius:11px; border:1px solid var(--border,#332c20); background:repeating-linear-gradient(135deg, var(--surface2,#241f17) 0 9px, transparent 9px 18px), var(--bg,#100e0b);"></div>
+                      </sc-for>
+                    </div>
+                    <div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:10px;">Se subirá tras la salida. Cualquier miembro puede añadir las suyas.</div>
+                  </div>
+                </div>
+                <div style="flex:1 1 240px; min-width:0;">
+                  <div style="border-radius:16px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:16px 18px;">
+                    <div style="font:800 16px 'Bricolage Grotesque'; margin-bottom:4px;">¿Te vienes?</div>
+                    <div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-bottom:14px;">La lista la ve todo el grupo.</div>
+                    <div style="display:flex; gap:9px; margin-bottom:16px;">
+                      <span style="flex:1; text-align:center; font:700 14px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:11px 0; border-radius:11px;">Voy</span>
+                      <span style="flex:1; text-align:center; font:700 14px 'Hanken Grotesk'; color:var(--text,#f3f4f6); background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); padding:11px 0; border-radius:11px;">No puedo</span>
+                    </div>
+                    <div style="font:700 12px 'Hanken Grotesk'; color:var(--dim,#a59885); text-transform:uppercase; letter-spacing:.05em; margin-bottom:11px;">Confirmados · 18</div>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                      <sc-for list="{{ members }}" as="mb" hint-placeholder-count="6">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                          <span style="width:28px;height:28px;border-radius:50%; flex:0 0 auto; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 11px 'Bricolage Grotesque';">{{ mb.init }}</span>
+                          <span style="flex:1; font:600 13px 'Hanken Grotesk';">{{ mb.name }}</span>
+                          <span style="width:7px;height:7px;border-radius:50%; background:#34c759;"></span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- ===== GALERÍA (álbumes) ===== -->
+            <sc-if value="{{ isGaleria }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px;">
+                <div>
+                  <div style="font:800 30px 'Bricolage Grotesque'; letter-spacing:-.6px;">Galería</div>
+                  <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:3px;">Álbumes de fotos y vídeos, por salida</div>
+                </div>
+                <span style="cursor:pointer; font:700 14px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:11px 18px; border-radius:13px;">+ Subir</span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:16px;">
+                <sc-for list="{{ albums }}" as="al" hint-placeholder-count="6">
+                  <div onClick="{{ act.album }}" style="cursor:pointer; border-radius:16px; overflow:hidden; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813);">
+                    <div style="aspect-ratio:4/3; background:repeating-linear-gradient(130deg, var(--surface2,#241f17) 0 10px, transparent 10px 20px), var(--bg,#100e0b); position:relative;">
+                      <span style="position:absolute; bottom:10px; right:11px; font:600 11px 'Hanken Grotesk'; color:var(--text,#f3f4f6); background:var(--surface,#1b1813); border:1px solid var(--border,#332c20); padding:4px 10px; border-radius:18px;">{{ al.count }}</span>
+                    </div>
+                    <div style="padding:13px 15px;">
+                      <div style="font:800 16px 'Bricolage Grotesque';">{{ al.name }}</div>
+                      <div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:3px;">{{ al.date }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <!-- ===== ÁLBUM ===== -->
+            <sc-if value="{{ isAlbum }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; gap:9px; margin-bottom:12px;">
+                <span onClick="{{ act.galeria }}" style="cursor:pointer; font:600 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">← Galería</span>
+              </div>
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px;">
+                <div>
+                  <div style="font:800 30px 'Bricolage Grotesque'; letter-spacing:-.6px;">Subida a la Morcuera</div>
+                  <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:3px;">5 jul · 34 fotos · 2 vídeos · subido por Bea</div>
+                </div>
+                <span style="cursor:pointer; font:700 13px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:10px 16px; border-radius:12px;">+ Añadir las mías</span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); grid-auto-rows:140px; gap:10px;">
+                <sc-for list="{{ albumPhotos }}" as="p" hint-placeholder-count="12">
+                  <div style="border-radius:13px; border:1px solid var(--border,#332c20); background:repeating-linear-gradient(135deg, var(--surface2,#241f17) 0 10px, transparent 10px 20px), var(--bg,#100e0b); position:relative; display:flex; align-items:flex-end; padding:9px;">
+                    <span style="font:500 10px 'IBM Plex Mono'; color:var(--dim,#a59885);">{{ p.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <!-- ===== BLOG (listado) ===== -->
+            <sc-if value="{{ isBlog }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px;">
+                <div>
+                  <div style="font:800 30px 'Bricolage Grotesque'; letter-spacing:-.6px;">Blog</div>
+                  <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:3px;">Crónicas, guías y batallitas de la peña</div>
+                </div>
+                <span style="cursor:pointer; font:700 14px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:11px 18px; border-radius:13px;">+ Escribir</span>
+              </div>
+              <div onClick="{{ act.post }}" style="cursor:pointer; border-radius:18px; overflow:hidden; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); margin-bottom:16px;">
+                <div style="aspect-ratio:21/8; background:repeating-linear-gradient(135deg, var(--surface2,#241f17) 0 12px, transparent 12px 24px), var(--bg,#100e0b);"></div>
+                <div style="padding:18px 20px;">
+                  <span style="font:600 11px 'Hanken Grotesk'; color:var(--accent,#f2a93c); text-transform:uppercase; letter-spacing:.06em;">Crónica</span>
+                  <div style="font:800 24px 'Bricolage Grotesque'; letter-spacing:-.4px; margin:7px 0 6px;">Nos comimos la Morcuera bajo la lluvia</div>
+                  <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); line-height:1.5;">Salimos con cielo gris y a los 20 km ya caía con ganas. Aun así fue de esos días que se recuerdan…</div>
+                  <div style="display:flex; align-items:center; gap:10px; margin-top:13px;">
+                    <span style="width:26px;height:26px;border-radius:50%; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 11px 'Bricolage Grotesque';">B</span>
+                    <span style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">Bea · hace 2 días · ♥ 14</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <sc-for list="{{ blog }}" as="b" hint-placeholder-count="3">
+                  <div onClick="{{ act.post }}" style="cursor:pointer; display:flex; align-items:center; gap:14px; border-radius:15px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:14px 16px;">
+                    <div style="flex:0 0 auto; width:64px; height:64px; border-radius:11px; background:repeating-linear-gradient(125deg, var(--surface2,#241f17) 0 8px, transparent 8px 16px), var(--bg,#100e0b); border:1px solid var(--border,#332c20);"></div>
+                    <div style="flex:1; min-width:0;">
+                      <div style="font:800 16px 'Bricolage Grotesque'; margin-bottom:5px;">{{ b.title }}</div>
+                      <div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ b.author }} · {{ b.when }} · ♥ {{ b.likes }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <!-- ===== POST (detalle) ===== -->
+            <sc-if value="{{ isPost }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;">
+                <span onClick="{{ act.blog }}" style="cursor:pointer; font:600 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">← Blog</span>
+              </div>
+              <div style="max-width:680px; margin:0 auto;">
+                <span style="font:600 11px 'Hanken Grotesk'; color:var(--accent,#f2a93c); text-transform:uppercase; letter-spacing:.06em;">Crónica</span>
+                <div style="font:800 36px 'Bricolage Grotesque'; letter-spacing:-.8px; line-height:1.08; margin:8px 0 14px;">Nos comimos la Morcuera bajo la lluvia</div>
+                <div style="display:flex; align-items:center; gap:11px; margin-bottom:18px;">
+                  <span style="width:34px;height:34px;border-radius:50%; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 13px 'Bricolage Grotesque';">B</span>
+                  <div><div style="font:700 14px 'Hanken Grotesk';">Bea</div><div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">5 de julio · 4 min de lectura</div></div>
+                </div>
+                <div style="aspect-ratio:16/8; border-radius:16px; border:1px solid var(--border,#332c20); background:repeating-linear-gradient(135deg, var(--surface2,#241f17) 0 12px, transparent 12px 24px), var(--bg,#100e0b); margin-bottom:20px;"></div>
+                <div style="font:400 16px/1.7 'Hanken Grotesk'; color:var(--text,#f3f4f6);">
+                  <p style="margin:0 0 16px;">Salimos a las ocho de la plaza con el cielo de un gris que no presagiaba nada bueno. Doce valientes, dos chubasqueros decentes y un optimismo que duró exactamente hasta el kilómetro veinte.</p>
+                  <p style="margin:0 0 16px; color:var(--dim,#a59885);">«Si llueve, llueve para todos», dijo Txus. Y vaya si llovió.</p>
+                  <p style="margin:0 0 16px;">La subida a la Morcuera con el firme mojado es otra cosa: cada rampa pide respeto y la bajada, todavía más. Reagrupamos arriba, temblando, e hicimos la foto de cima que ya es historia de la grupeta. El bar de siempre nos salvó la vida con café y tortilla.</p>
+                  <p style="margin:0;">Moraleja: la próxima, chubasquero de verdad. Pero volveríamos a ir sin pensarlo.</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; margin:24px 0; padding:14px 0; border-top:1px solid var(--border,#332c20); border-bottom:1px solid var(--border,#332c20);">
+                  <span style="display:inline-flex; align-items:center; gap:8px; font:700 14px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:9px 18px; border-radius:22px;">♥ Me gusta · 14</span>
+                  <span style="font:600 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">3 comentarios</span>
+                </div>
+                <div style="font:800 18px 'Bricolage Grotesque'; margin-bottom:14px;">Comentarios</div>
+                <div style="display:flex; gap:11px; margin-bottom:18px;">
+                  <span style="width:34px;height:34px;border-radius:50%; flex:0 0 auto; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 13px 'Bricolage Grotesque';">N</span>
+                  <div style="flex:1; height:44px; border-radius:12px; border:1px solid var(--border,#332c20); background:var(--bg,#100e0b); display:flex; align-items:center; padding:0 14px; font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885);">Escribe un comentario…</div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                  <sc-for list="{{ comments }}" as="c" hint-placeholder-count="3">
+                    <div style="display:flex; gap:11px;">
+                      <span style="width:34px;height:34px;border-radius:50%; flex:0 0 auto; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 13px 'Bricolage Grotesque';">{{ c.init }}</span>
+                      <div style="flex:1;">
+                        <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:4px;"><span style="font:700 13px 'Hanken Grotesk';">{{ c.name }}</span><span style="font:500 11px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ c.when }}</span></div>
+                        <div style="font:400 14px/1.55 'Hanken Grotesk'; color:var(--text,#f3f4f6);">{{ c.text }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- ===== CHAT ===== -->
+            <sc-if value="{{ isChat }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; height:560px; border-radius:18px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); overflow:hidden;">
+                <div style="display:flex; align-items:center; gap:11px; padding:14px 18px; border-bottom:1px solid var(--border,#332c20); flex:0 0 auto;">
+                  <span style="width:38px;height:38px;border-radius:12px; background:var(--accent,#f2a93c); color:var(--ac-text,#2a1d05); display:flex;align-items:center;justify-content:center; font:800 16px 'Bricolage Grotesque';">6</span>
+                  <div style="flex:1;"><div style="font:800 16px 'Bricolage Grotesque';">Sala general</div><div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">41 miembros · 6 escribiendo ahora</div></div>
+                  <span style="width:9px;height:9px;border-radius:50%; background:#34c759;"></span>
+                </div>
+                <div style="flex:1 1 auto; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:14px;">
+                  <div style="text-align:center; font:500 11px 'Hanken Grotesk'; color:var(--dim,#a59885);">— hoy —</div>
+                  <sc-for list="{{ chatMsgs }}" as="m" hint-placeholder-count="5">
+                    <div style="display:flex; gap:10px; flex-direction:{{ m.dir }}; align-items:flex-end;">
+                      <span style="width:30px;height:30px;border-radius:50%; flex:0 0 auto; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 11px 'Bricolage Grotesque';">{{ m.init }}</span>
+                      <div style="max-width:74%;">
+                        <div style="display:flex; gap:7px; align-items:baseline; margin-bottom:3px; flex-direction:{{ m.dir }};"><span style="font:700 12px 'Hanken Grotesk';">{{ m.name }}</span><span style="font:500 10px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ m.when }}</span></div>
+                        <div style="font:400 14px/1.5 'Hanken Grotesk'; color:{{ m.bubbleText }}; background:{{ m.bubbleBg }}; border:1px solid var(--border,#332c20); padding:9px 13px; border-radius:14px;">{{ m.text }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:13px 16px; border-top:1px solid var(--border,#332c20); flex:0 0 auto;">
+                  <div style="flex:1; height:42px; border-radius:13px; border:1px solid var(--border,#332c20); background:var(--bg,#100e0b); display:flex; align-items:center; padding:0 14px; font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885);">Escribe a la grupeta…</div>
+                  <span style="width:42px;height:42px;border-radius:13px; flex:0 0 auto; background:var(--accent,#f2a93c); color:var(--ac-text,#2a1d05); display:flex;align-items:center;justify-content:center; font:700 18px 'Hanken Grotesk';">↑</span>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- ===== MIEMBROS ===== -->
+            <sc-if value="{{ isMiembros }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px;">
+                <div>
+                  <div style="font:800 30px 'Bricolage Grotesque'; letter-spacing:-.6px;">La peña</div>
+                  <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:3px;">41 de 50 miembros · ranking de km en junio</div>
+                </div>
+                <div style="display:flex; gap:4px; padding:3px; background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); border-radius:10px;">
+                  <span style="font:600 12px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:6px 13px; border-radius:7px;">Ranking</span>
+                  <span style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); padding:6px 13px;">Directorio</span>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:14px;">
+                <sc-for list="{{ members }}" as="mb" hint-placeholder-count="8">
+                  <div onClick="{{ act.perfil }}" style="cursor:pointer; display:flex; align-items:center; gap:13px; border-radius:15px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:14px 16px;">
+                    <span style="width:46px;height:46px;border-radius:50%; flex:0 0 auto; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:800 18px 'Bricolage Grotesque';">{{ mb.init }}</span>
+                    <div style="flex:1; min-width:0;">
+                      <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;">
+                        <span style="font:800 16px 'Bricolage Grotesque';">{{ mb.name }}</span>
+                        <span style="font:600 10px 'Hanken Grotesk'; color:{{ mb.roleColor }}; background:{{ mb.roleBg }}; border:1px solid var(--border,#332c20); padding:2px 8px; border-radius:14px;">{{ mb.role }}</span>
+                      </div>
+                      <div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ mb.bike }}</div>
+                    </div>
+                    <div style="text-align:right; flex:0 0 auto;">
+                      <div style="font:800 18px 'Bricolage Grotesque';">{{ mb.km }}</div>
+                      <div style="font:500 10px 'Hanken Grotesk'; color:var(--dim,#a59885);">km · jun</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <!-- ===== PERFIL ===== -->
+            <sc-if value="{{ isPerfil }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;">
+                <span onClick="{{ act.miembros }}" style="cursor:pointer; font:600 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">← La peña</span>
+              </div>
+              <div style="border-radius:18px; overflow:hidden; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); margin-bottom:18px;">
+                <div style="height:120px; background:repeating-linear-gradient(135deg, var(--surface2,#241f17) 0 12px, transparent 12px 24px), var(--bg,#100e0b);"></div>
+                <div style="padding:0 20px 20px; margin-top:-34px;">
+                  <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:flex-end; gap:14px;">
+                      <span style="width:78px;height:78px;border-radius:50%; background:var(--surface2,#241f17); border:3px solid var(--surface,#1b1813); display:flex;align-items:center;justify-content:center; font:800 30px 'Bricolage Grotesque';">N</span>
+                      <div style="padding-bottom:6px;"><div style="font:800 26px 'Bricolage Grotesque'; letter-spacing:-.4px;">Nando</div><div style="font:500 13px 'Hanken Grotesk'; color:var(--dim,#a59885);">Miembro desde 2023 · Orbea Orca</div></div>
+                    </div>
+                    <span style="cursor:pointer; font:700 13px 'Hanken Grotesk'; color:var(--text,#f3f4f6); background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); padding:10px 18px; border-radius:12px;">Editar perfil</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:13px; margin-bottom:18px;">
+                <div style="border-radius:15px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:16px 18px;"><div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">km totales</div><div style="font:800 26px 'Bricolage Grotesque'; margin-top:6px;">8.940</div></div>
+                <div style="border-radius:15px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:16px 18px;"><div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">Rutas hechas</div><div style="font:800 26px 'Bricolage Grotesque'; margin-top:6px;">128</div></div>
+                <div style="border-radius:15px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:16px 18px;"><div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">Eventos</div><div style="font:800 26px 'Bricolage Grotesque'; margin-top:6px;">63</div></div>
+                <div style="border-radius:15px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:16px 18px;"><div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">Desnivel · jun</div><div style="font:800 26px 'Bricolage Grotesque'; margin-top:6px;">7.6k</div></div>
+              </div>
+              <div style="display:flex; gap:18px; flex-wrap:wrap;">
+                <div style="flex:1 1 280px; min-width:0;">
+                  <div style="font:800 18px 'Bricolage Grotesque'; margin-bottom:12px;">Mis bicis</div>
+                  <div style="display:flex; flex-direction:column; gap:11px;">
+                    <div style="display:flex; align-items:center; gap:13px; border-radius:14px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:13px 15px;"><div style="width:54px;height:40px;border-radius:9px; background:repeating-linear-gradient(120deg, var(--surface2,#241f17) 0 7px, transparent 7px 14px), var(--bg,#100e0b); border:1px solid var(--border,#332c20);"></div><div style="flex:1;"><div style="font:700 14px 'Hanken Grotesk';">Orbea Orca M21</div><div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">Carretera · 2023</div></div></div>
+                    <div style="display:flex; align-items:center; gap:13px; border-radius:14px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:13px 15px;"><div style="width:54px;height:40px;border-radius:9px; background:repeating-linear-gradient(120deg, var(--surface2,#241f17) 0 7px, transparent 7px 14px), var(--bg,#100e0b); border:1px solid var(--border,#332c20);"></div><div style="flex:1;"><div style="font:700 14px 'Hanken Grotesk';">Marin Gestalt</div><div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">Gravel · 2021</div></div></div>
+                  </div>
+                </div>
+                <div style="flex:1 1 280px; min-width:0;">
+                  <div style="font:800 18px 'Bricolage Grotesque'; margin-bottom:12px;">Últimas salidas</div>
+                  <div style="border-radius:14px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); overflow:hidden;">
+                    <sc-for list="{{ routes }}" as="r" hint-placeholder-count="4">
+                      <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 15px; border-bottom:1px solid var(--border,#332c20);"><div><div style="font:600 13px 'Hanken Grotesk';">{{ r.name }}</div><div style="font:500 11px 'Hanken Grotesk'; color:var(--dim,#a59885);">{{ r.date }}</div></div><span style="font:700 13px 'Bricolage Grotesque';">{{ r.km }} km</span></div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- ===== MODERACIÓN ===== -->
+            <sc-if value="{{ isModeracion }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-bottom:18px;">
+                <div style="display:flex; align-items:center; gap:9px;">
+                  <div style="font:800 30px 'Bricolage Grotesque'; letter-spacing:-.6px;">Moderación</div>
+                  <span style="font:600 10px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:3px 10px; border-radius:14px;">Admin</span>
+                </div>
+                <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:3px;">Aprueba registros y gestiona roles del grupo</div>
+              </div>
+              <div style="display:flex; gap:18px; flex-wrap:wrap;">
+                <div style="flex:1 1 320px; min-width:0;">
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                    <span style="font:800 17px 'Bricolage Grotesque';">Registros pendientes</span>
+                    <span style="font:700 11px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:2px 9px; border-radius:12px;">3</span>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:11px;">
+                    <sc-for list="{{ pending }}" as="p" hint-placeholder-count="3">
+                      <div style="border-radius:15px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:14px 16px;">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                          <span style="width:40px;height:40px;border-radius:50%; flex:0 0 auto; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:800 16px 'Bricolage Grotesque';">{{ p.init }}</span>
+                          <div style="flex:1; min-width:0;"><div style="font:700 15px 'Hanken Grotesk';">{{ p.name }}</div><div style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.email }} · {{ p.when }}</div></div>
+                        </div>
+                        <div style="display:flex; gap:9px;">
+                          <span style="flex:1; text-align:center; font:700 13px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:9px 0; border-radius:11px;">Aprobar</span>
+                          <span style="flex:1; text-align:center; font:700 13px 'Hanken Grotesk'; color:var(--text,#f3f4f6); background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); padding:9px 0; border-radius:11px;">Rechazar</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="flex:1 1 320px; min-width:0;">
+                  <div style="font:800 17px 'Bricolage Grotesque'; margin-bottom:12px;">Roles</div>
+                  <div style="border-radius:15px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); overflow:hidden;">
+                    <sc-for list="{{ members }}" as="mb" hint-placeholder-count="6">
+                      <div style="display:flex; align-items:center; gap:12px; padding:12px 15px; border-bottom:1px solid var(--border,#332c20);">
+                        <span style="width:34px;height:34px;border-radius:50%; flex:0 0 auto; background:var(--surface2,#241f17); border:1px solid var(--border,#332c20); display:flex;align-items:center;justify-content:center; font:700 13px 'Bricolage Grotesque';">{{ mb.init }}</span>
+                        <span style="flex:1; font:600 14px 'Hanken Grotesk';">{{ mb.name }}</span>
+                        <span style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); padding:6px 12px; border-radius:9px;">{{ mb.role }} ▾</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- @SCREEN-INSERT -->
+
+          </div>
+        </div>
+
+        <!-- bottom bar (mobile) -->
+        <sc-if value="{{ mobileShell }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; justify-content:space-around; align-items:center; padding:10px 0 16px; border-top:1px solid var(--border,#332c20); background:var(--surface,#1b1813); flex:0 0 auto;">
+            <sc-for list="{{ navMobile }}" as="n" hint-placeholder-count="5">
+              <span onClick="{{ n.onClick }}" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; font:600 10px 'Hanken Grotesk'; color:{{ n.color }};">
+                <span style="width:6px;height:6px;border-radius:50%; background:{{ n.dot }};"></span>{{ n.label }}
+              </span>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ===== AUTH (no shell) ===== -->
+        <sc-if value="{{ isAuth }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:34px 22px 44px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:520px;">
+            <div style="width:100%; max-width:380px;">
+              <div style="text-align:center; margin-bottom:22px;">
+                <div style="font:800 30px 'Bricolage Grotesque'; letter-spacing:-.5px;">6el1</div>
+                <div style="font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-top:4px;">la grupeta de carretera · acceso privado</div>
+              </div>
+              <div style="border-radius:18px; border:1px solid var(--border,#332c20); background:var(--surface,#1b1813); padding:22px;">
+                <div style="display:flex; gap:4px; padding:4px; background:var(--bg,#100e0b); border:1px solid var(--border,#332c20); border-radius:11px; margin-bottom:18px;">
+                  <span onClick="{{ authLogin }}" style="cursor:pointer; flex:1; text-align:center; font:700 13px 'Hanken Grotesk'; padding:9px 0; border-radius:8px; color:{{ tabLoginColor }}; background:{{ tabLoginBg }};">Entrar</span>
+                  <span onClick="{{ authRegister }}" style="cursor:pointer; flex:1; text-align:center; font:700 13px 'Hanken Grotesk'; padding:9px 0; border-radius:8px; color:{{ tabRegColor }}; background:{{ tabRegBg }};">Crear cuenta</span>
+                </div>
+
+                <sc-if value="{{ authIsRegister }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div><div style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-bottom:6px;">Nombre</div><div style="height:44px; border-radius:11px; border:1px solid var(--border,#332c20); background:var(--bg,#100e0b); display:flex; align-items:center; padding:0 13px; font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885);">Tu nombre y apodo</div></div>
+                    <div><div style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-bottom:6px;">Email</div><div style="height:44px; border-radius:11px; border:1px solid var(--border,#332c20); background:var(--bg,#100e0b); display:flex; align-items:center; padding:0 13px; font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885);">tu@email.com</div></div>
+                    <div><div style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-bottom:6px;">Contraseña</div><div style="height:44px; border-radius:11px; border:1px solid var(--border,#332c20); background:var(--bg,#100e0b); display:flex; align-items:center; padding:0 13px; font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885);">••••••••</div></div>
+                    <span style="text-align:center; font:700 15px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:13px 0; border-radius:12px; margin-top:4px;">Solicitar acceso</span>
+                    <div style="display:flex; gap:9px; align-items:flex-start; background:var(--accent-soft,rgba(242,169,60,.16)); border:1px solid var(--border,#332c20); border-radius:12px; padding:12px 13px;">
+                      <span style="width:7px;height:7px;border-radius:50%; background:var(--accent,#f2a93c); margin-top:6px; flex:0 0 auto;"></span>
+                      <span style="font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885); line-height:1.5;">Tu cuenta queda <strong style="color:var(--text,#f3f4f6);">pendiente de aprobación</strong>. Un admin o moderador la revisará y recibirás un email cuando esté activa.</span>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ authIsLogin }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div><div style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-bottom:6px;">Email</div><div style="height:44px; border-radius:11px; border:1px solid var(--border,#332c20); background:var(--bg,#100e0b); display:flex; align-items:center; padding:0 13px; font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885);">tu@email.com</div></div>
+                    <div><div style="font:600 12px 'Hanken Grotesk'; color:var(--dim,#a59885); margin-bottom:6px;">Contraseña</div><div style="height:44px; border-radius:11px; border:1px solid var(--border,#332c20); background:var(--bg,#100e0b); display:flex; align-items:center; padding:0 13px; font:500 14px 'Hanken Grotesk'; color:var(--dim,#a59885);">••••••••</div></div>
+                    <span onClick="{{ act.dashboard }}" style="cursor:pointer; text-align:center; font:700 15px 'Hanken Grotesk'; color:var(--ac-text,#2a1d05); background:var(--accent,#f2a93c); padding:13px 0; border-radius:12px; margin-top:4px;">Entrar</span>
+                    <span style="text-align:center; font:500 12px 'Hanken Grotesk'; color:var(--dim,#a59885);">¿Olvidaste la contraseña?</span>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100%&quot;}}">
+class Component extends DCLogic {
+  state = { dark: true, mobile: false, screen: 'dashboard', authTab: 'login' };
+
+  themeVars() {
+    const d = this.state.dark;
+    return d ? {
+      '--bg': '#100e0b', '--surface': '#1b1813', '--surface2': '#241f17',
+      '--border': '#332c20', '--text': '#f3f4f6', '--dim': '#a59885',
+      '--accent': '#f2a93c', '--ac-text': '#2a1d05', '--accent-soft': 'rgba(242,169,60,.16)',
+      '--shadow': '0 16px 40px rgba(0,0,0,.5)'
+    } : {
+      '--bg': '#f7f3ec', '--surface': '#ffffff', '--surface2': '#f1ebe0',
+      '--border': '#e8e0d2', '--text': '#15171b', '--dim': '#867a66',
+      '--accent': '#e0921f', '--ac-text': '#2a1d05', '--accent-soft': 'rgba(224,146,31,.14)',
+      '--shadow': '0 16px 40px rgba(120,90,40,.12)'
+    };
+  }
+
+  componentDidMount() {
+    try {
+      const d = localStorage.getItem('g6_theme');
+      const m = localStorage.getItem('g6_device');
+      const s = localStorage.getItem('g6_screen');
+      const ns = {};
+      if (d !== null) ns.dark = d === '1';
+      if (m !== null) ns.mobile = m === '1';
+      if (s) ns.screen = s;
+      if (Object.keys(ns).length) this.setState(ns);
+    } catch (e) {}
+  }
+
+  go(s) {
+    return () => {
+      try { localStorage.setItem('g6_screen', s); } catch (e) {}
+      this.setState({ screen: s });
+      const m = this.root && this.root.querySelector('[data-appmain]');
+      if (m) m.scrollTop = 0;
+      try { if (this.root) this.root.scrollIntoView({ block: 'start' }); } catch (e) {}
+    };
+  }
+
+  renderVals() {
+    const screen = this.state.screen;
+    const mobile = this.state.mobile;
+    const desktop = !mobile;
+    const isAuth = screen === 'auth';
+    const go = (s) => this.go(s);
+
+    const labels = {
+      dashboard: 'inicio', rutas: 'rutas', ruta: 'rutas/morcuera', eventos: 'eventos',
+      evento: 'eventos/morcuera', galeria: 'galeria', album: 'galeria/morcuera',
+      blog: 'blog', post: 'blog/cronica-morcuera', chat: 'chat', miembros: 'miembros',
+      perfil: 'miembros/nando', moderacion: 'admin/registros', auth: 'acceso'
+    };
+
+    const navDefs = [['dashboard', 'Inicio'], ['rutas', 'Rutas'], ['eventos', 'Eventos'], ['galeria', 'Galería'], ['blog', 'Blog'], ['chat', 'Chat'], ['miembros', 'Miembros']];
+    const nav = navDefs.map(([k, l]) => ({
+      key: k, label: l, onClick: go(k),
+      color: screen === k ? 'var(--ac-text)' : 'var(--dim)',
+      bg: screen === k ? 'var(--accent)' : 'transparent'
+    }));
+    const navMobileDefs = [['dashboard', 'Inicio'], ['rutas', 'Rutas'], ['galeria', 'Galería'], ['chat', 'Chat'], ['miembros', 'Peña']];
+    const navMobile = navMobileDefs.map(([k, l]) => ({
+      key: k, label: l, onClick: go(k),
+      color: screen === k ? 'var(--accent)' : 'var(--dim)',
+      dot: screen === k ? 'var(--accent)' : 'var(--dim)'
+    }));
+
+    const act = {};
+    ['dashboard', 'rutas', 'ruta', 'galeria', 'album', 'eventos', 'evento', 'blog', 'post', 'chat', 'miembros', 'perfil', 'moderacion', 'auth'].forEach((k) => { act[k] = go(k); });
+
+    const frameBox = mobile
+      ? { width: '402px', maxWidth: '100%', padding: '12px', borderRadius: '48px', background: 'var(--surface2)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }
+      : { width: '100%', maxWidth: '1240px', borderRadius: '16px', overflow: 'hidden', background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' };
+    const innerScreen = mobile
+      ? { borderRadius: '36px', overflow: 'hidden', background: 'var(--bg)', border: '1px solid var(--border)', height: '800px', display: 'flex', flexDirection: 'column' }
+      : { background: 'var(--bg)', display: 'flex', flexDirection: 'column' };
+    const appMain = mobile
+      ? { flex: '1 1 auto', overflowY: 'auto', minHeight: '0' }
+      : {};
+
+    const f = (k) => screen === k;
+    const authTab = this.state.authTab;
+
+    return {
+      rootRef: (el) => { this.root = el; },
+      vars: this.themeVars(),
+      screen, mobile, desktop,
+      themeLabel: this.state.dark ? 'Oscuro' : 'Claro',
+      toggleTheme: () => { const v = !this.state.dark; try { localStorage.setItem('g6_theme', v ? '1' : '0'); } catch (e) {} this.setState({ dark: v }); },
+      goDesktop: () => { try { localStorage.setItem('g6_device', '0'); } catch (e) {} this.setState({ mobile: false }); },
+      goMobile: () => { try { localStorage.setItem('g6_device', '1'); } catch (e) {} this.setState({ mobile: true }); },
+      deskColor: desktop ? 'var(--ac-text)' : 'var(--dim)',
+      deskBg: desktop ? 'var(--accent)' : 'transparent',
+      mobColor: mobile ? 'var(--ac-text)' : 'var(--dim)',
+      mobBg: mobile ? 'var(--accent)' : 'transparent',
+      onPick: (e) => { const v = e.target.value; try { localStorage.setItem('g6_screen', v); } catch (er) {} this.setState({ screen: v }); },
+      urlPath: labels[screen] || 'inicio',
+      nav, navMobile, act,
+      frameBox, innerScreen, appMain,
+      notAuth: !isAuth, isAuth,
+      mobileShell: mobile && !isAuth,
+      isDashboard: f('dashboard'), isRutas: f('rutas'), isRuta: f('ruta'),
+      isEventos: f('eventos'), isEvento: f('evento'), isGaleria: f('galeria'),
+      isAlbum: f('album'), isBlog: f('blog'), isPost: f('post'), isChat: f('chat'),
+      isMiembros: f('miembros'), isPerfil: f('perfil'), isModeracion: f('moderacion'),
+      authLogin: () => this.setState({ authTab: 'login' }),
+      authRegister: () => this.setState({ authTab: 'register' }),
+      authIsLogin: authTab === 'login', authIsRegister: authTab === 'register',
+      tabLoginColor: authTab === 'login' ? 'var(--ac-text)' : 'var(--dim)',
+      tabLoginBg: authTab === 'login' ? 'var(--accent)' : 'transparent',
+      tabRegColor: authTab === 'register' ? 'var(--ac-text)' : 'var(--dim)',
+      tabRegBg: authTab === 'register' ? 'var(--accent)' : 'transparent',
+
+      albums: [
+        { name: 'Subida a la Morcuera', date: '5 jul 2026', count: '34 fotos' },
+        { name: 'Café & rodada suave', date: '28 jun 2026', count: '21 fotos' },
+        { name: 'Los 3 puertos', date: '14 jun 2026', count: '52 fotos' },
+        { name: 'Gravel por la dehesa', date: '21 jun 2026', count: '18 fotos' },
+        { name: 'Cena fin de temporada', date: '7 jun 2026', count: '40 fotos' },
+        { name: 'Marcha Quebrantahuesos', date: '24 may 2026', count: '63 fotos' }
+      ],
+      albumPhotos: [
+        { label: 'salida plaza' }, { label: 'primer repecho' }, { label: 'grupo en fila' },
+        { label: 'rampa dura' }, { label: 'cima 1.796 m' }, { label: 'foto de grupo' },
+        { label: 'bajada' }, { label: 'avituallamiento' }, { label: 'cañas finales' },
+        { label: 'vídeo sprint' }, { label: 'paisaje' }, { label: 'la cabra de Cova' }
+      ],
+      elevation: ['18%','24%','30%','27%','36%','44%','40%','52%','61%','55%','68%','74%','82%','78%','90%','97%','88%','72%','60%','66%','54%','46%','52%','40%','33%','26%','30%','20%'],
+      statsClub: [
+        { label: 'km del club · jun', val: '4.820', unit: '' },
+        { label: 'Desnivel', val: '68.300', unit: 'm+' },
+        { label: 'Rutas', val: '37', unit: '' },
+        { label: 'Activos', val: '41/50', unit: '' }
+      ],
+      media: [
+        { label: 'subida morcuera' }, { label: 'café & grupo' }, { label: 'descenso' },
+        { label: 'vídeo sprint' }, { label: 'avituallamiento' }, { label: 'foto cima' }
+      ],
+      podium: [
+        { pos: 1, name: 'Cova', km: 612, badgeBg: 'var(--accent)', badgeColor: 'var(--ac-text)' },
+        { pos: 2, name: 'Nando', km: 540, badgeBg: 'var(--surface2)', badgeColor: 'var(--text)' },
+        { pos: 3, name: 'Edu', km: 498, badgeBg: 'var(--surface2)', badgeColor: 'var(--text)' }
+      ],
+      ranking: [
+        { pos: 1, name: 'Cova', km: 612, init: 'C', pct: '100%' },
+        { pos: 2, name: 'Nando', km: 540, init: 'N', pct: '88%' },
+        { pos: 3, name: 'Edu', km: 498, init: 'E', pct: '81%' },
+        { pos: 4, name: 'Bea', km: 455, init: 'B', pct: '74%' },
+        { pos: 5, name: 'Txus', km: 410, init: 'T', pct: '67%' }
+      ],
+      events: [
+        { day: 'DOM', d: '05', mon: 'JUL', time: '08:00', title: 'Ruta larga: Puerto de la Morcuera', km: '92', up: '1.450', tag: 'Carretera', going: '18', who3: ['C', 'N', 'E'], more: '+15' },
+        { day: 'SÁB', d: '11', mon: 'JUL', time: '09:00', title: 'Café & rodada suave', km: '45', up: '480', tag: 'Social', going: '12', who3: ['T', 'M', 'A'], more: '+9' },
+        { day: 'DOM', d: '19', mon: 'JUL', time: '07:30', title: 'Prep Quebrantahuesos', km: '120', up: '2.600', tag: 'Reto', going: '9', who3: ['N', 'E', 'C'], more: '+6' }
+      ],
+      blog: [
+        { title: 'Crónica: nos comimos la Morcuera bajo la lluvia', author: 'Bea', when: 'hace 2 d', likes: '14', init: 'B' },
+        { title: 'Guía: presión de neumáticos para rodar en grupo', author: 'Edu', when: 'hace 4 d', likes: '9', init: 'E' },
+        { title: 'Por qué decimos «6el1» (y no, no te lo explicamos)', author: 'Cova', when: 'hace 1 sem', likes: '31', init: 'C' }
+      ],
+      routes: [
+        { name: 'Puerto de la Morcuera', km: '92', up: '1.450', surface: 'Carretera', date: '5 jul', author: 'Cova', init: 'C', tag: 'Dura' },
+        { name: 'Vuelta al pantano', km: '58', up: '620', surface: 'Carretera', date: '28 jun', author: 'Edu', init: 'E', tag: 'Media' },
+        { name: 'Gravel por la dehesa', km: '41', up: '380', surface: 'Gravel', date: '21 jun', author: 'Bea', init: 'B', tag: 'Suave' },
+        { name: 'Los 3 puertos', km: '134', up: '3.100', surface: 'Carretera', date: '14 jun', author: 'Txus', init: 'T', tag: 'Reto' }
+      ],
+      members: [
+        { name: 'Cova', init: 'C', bike: 'Canyon Ultimate', km: 612, rutas: 14, role: 'Moderadora' },
+        { name: 'Nando', init: 'N', bike: 'Orbea Orca', km: 540, rutas: 12, role: 'Miembro' },
+        { name: 'Edu', init: 'E', bike: 'Specialized Tarmac', km: 498, rutas: 11, role: 'Miembro' },
+        { name: 'Bea', init: 'B', bike: 'Trek Émonda', km: 455, rutas: 10, role: 'Miembro' },
+        { name: 'Txus', init: 'T', bike: 'Cannondale CAAD', km: 410, rutas: 9, role: 'Admin' },
+        { name: 'Marta', init: 'M', bike: 'Giant TCR', km: 388, rutas: 8, role: 'Miembro' },
+        { name: 'Aitor', init: 'A', bike: 'BMC Teammachine', km: 355, rutas: 8, role: 'Miembro' },
+        { name: 'Lucía', init: 'L', bike: 'Cervélo Soloist', km: 332, rutas: 7, role: 'Miembro' }
+      ].map((mb) => ({
+        ...mb,
+        roleColor: mb.role === 'Miembro' ? 'var(--dim)' : 'var(--ac-text)',
+        roleBg: mb.role === 'Miembro' ? 'transparent' : 'var(--accent)'
+      })),
+      comments: [
+        { name: 'Edu', init: 'E', when: 'hace 1 d', text: 'Menudo día, acabé empapado pero mereció la pena. La bajada daba respeto.' },
+        { name: 'Txus', init: 'T', when: 'hace 22 h', text: 'Yo repito fijo. Eso sí, la próxima con chubasquero de verdad.' },
+        { name: 'Marta', init: 'M', when: 'hace 12 h', text: 'Las fotos de la cima son una pasada.' }
+      ],
+      chatMsgs: [
+        { name: 'Cova', init: 'C', me: false, text: '¿Mañana salimos a las 8 de la plaza?', when: '08:12' },
+        { name: 'Edu', init: 'E', me: false, text: 'Por mí perfecto, ¿ritmo tranqui?', when: '08:14' },
+        { name: 'Nando', init: 'N', me: true, text: 'Voy. Llevo cámara para el repe del último puerto.', when: '08:15' },
+        { name: 'Bea', init: 'B', me: false, text: 'Yo me uno en la rotonda, que me pilla de camino.', when: '08:20' },
+        { name: 'Txus', init: 'T', me: false, text: 'Recordad luces, que hay niebla a primera hora.', when: '08:31' }
+      ].map((m) => ({
+        ...m,
+        dir: m.me ? 'row-reverse' : 'row',
+        bubbleBg: m.me ? 'var(--accent-soft)' : 'var(--surface2)',
+        bubbleText: 'var(--text)'
+      })),
+      pending: [
+        { name: 'Sergio Ruiz', email: 'sergio.ruiz@gmail.com', when: 'hace 2 h', init: 'S' },
+        { name: 'Paula Gil', email: 'paula.gil@gmail.com', when: 'hace 5 h', init: 'P' },
+        { name: 'Iván Mora', email: 'ivan.mora@gmail.com', when: 'ayer', init: 'I' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,58 +1,75 @@
 {% extends 'base.html' %}
-{% block title %}Galería — GrupetaWeb{% endblock %}
+{% block title %}Galería{% endblock %}
+
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Galería</h1>
-    <a href="{% url 'media_gallery:upload' %}"
-       class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">
-        + Subir
-    </a>
+
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px;">
+  <div>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:30px;letter-spacing:-.6px;color:var(--text);">Galería</h1>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">Fotos y vídeos de la grupeta</p>
+  </div>
+  <a href="{% url 'media_gallery:upload' %}" class="btn-primary">+ Añadir las mías</a>
 </div>
 
-<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-    {% for item in items %}
-    <div class="relative group rounded-lg overflow-hidden bg-gray-100 aspect-square">
-        {% if item.media_type == 'image' %}
-        <img src="{{ item.cloudinary_url }}"
-             alt="{{ item.title|default:'Imagen' }}"
-             class="w-full h-full object-cover">
-        {% else %}
-        <video src="{{ item.cloudinary_url }}" class="w-full h-full object-cover"></video>
-        <div class="absolute inset-0 flex items-center justify-center">
-            <div class="bg-black bg-opacity-40 rounded-full p-3">
-                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
-                </svg>
-            </div>
-        </div>
-        {% endif %}
-        {% if item.uploaded_by == request.user or request.user.profile.is_moderator %}
-        <div class="absolute top-2 right-2 hidden group-hover:block">
-            <form method="post" action="{% url 'media_gallery:delete' item.pk %}"
-                  onsubmit="return confirm('¿Eliminar este archivo?')">
-                {% csrf_token %}
-                <button type="submit"
-                        class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">
-                    ×
-                </button>
-            </form>
-        </div>
-        {% endif %}
+{% if items %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:140px;gap:10px;">
+  {% for item in items %}
+  <div style="border-radius:13px;border:1px solid var(--border);overflow:hidden;position:relative;background:var(--surface2);">
+    {% if item.media_type == 'image' %}
+    <img src="{{ item.cloudinary_url }}"
+         alt="{{ item.title|default:'Foto' }}"
+         loading="lazy"
+         style="width:100%;height:100%;object-fit:cover;">
+    {% else %}
+    {# Vídeo: placeholder con icono play #}
+    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--surface);">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dim);">
+        <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
+      </svg>
     </div>
-    {% empty %}
-    <p class="col-span-full text-gray-500 text-center py-12">La galería está vacía. ¡Sube la primera foto!</p>
-    {% endfor %}
+    {% endif %}
+
+    {# Overlay con acciones #}
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.5) 0,transparent 60%);opacity:0;transition:opacity .2s ease;display:flex;flex-direction:column;justify-content:flex-end;padding:8px;"
+         onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0'">
+      {% if item.uploaded_by == request.user or request.user.profile.is_moderator %}
+      <form method="post" action="{% url 'media_gallery:delete' item.pk %}"
+            onsubmit="return confirm('¿Eliminar este archivo?')">
+        {% csrf_token %}
+        <button type="submit"
+                style="background:rgba(255,69,58,.8);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-family:var(--font-body);font-size:11px;font-weight:600;cursor:pointer;">
+          Eliminar
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
 </div>
 
+{# Paginación #}
 {% if is_paginated %}
-<div class="mt-8 flex justify-center space-x-2">
-    {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded text-sm">Anterior</a>
-    {% endif %}
-    <span class="px-3 py-1 text-sm text-gray-600">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded text-sm">Siguiente</a>
-    {% endif %}
+<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:28px;">
+  {% if page_obj.has_previous %}
+  <a href="?page={{ page_obj.previous_page_number }}" class="btn-secondary" style="padding:8px 16px;font-size:13px;">← Anterior</a>
+  {% endif %}
+  <span style="font-family:var(--font-mono);font-size:12px;color:var(--dim);">
+    {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+  </span>
+  {% if page_obj.has_next %}
+  <a href="?page={{ page_obj.next_page_number }}" class="btn-secondary" style="padding:8px 16px;font-size:13px;">Siguiente →</a>
+  {% endif %}
 </div>
 {% endif %}
+
+{% else %}
+<div style="text-align:center;padding:64px 20px;">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);margin:0 auto 16px;">
+    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+  </svg>
+  <p style="font-family:var(--font-body);font-size:15px;color:var(--dim);margin-bottom:16px;">Aún no hay fotos. ¡Sube las primeras!</p>
+  <a href="{% url 'media_gallery:upload' %}" class="btn-primary">+ Subir foto</a>
+</div>
+{% endif %}
+
 {% endblock %}

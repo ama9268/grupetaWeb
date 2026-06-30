@@ -1,71 +1,159 @@
 {% extends 'base.html' %}
-{% block title %}{{ route.title }} — GrupetaWeb{% endblock %}
+{% block title %}{{ route.title }}{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="bg-white rounded-lg shadow p-6 mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">{{ route.title }}</h1>
-        <p class="text-sm text-gray-500 mt-1">
-            Por {{ route.author.get_full_name|default:route.author.email }} · {{ route.created_at|date:"d/m/Y" }}
-        </p>
-        {% if route.description %}
-        <p class="mt-3 text-gray-700">{{ route.description }}</p>
-        {% endif %}
 
-        <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div class="bg-gray-50 rounded p-3">
-                <p class="text-xl font-bold text-gray-900">{{ route.distance_km|default:"—" }}</p>
-                <p class="text-xs text-gray-500">km totales</p>
-            </div>
-            <div class="bg-gray-50 rounded p-3">
-                <p class="text-xl font-bold text-green-700">+{{ route.elevation_gain_m|default:"—" }}</p>
-                <p class="text-xs text-gray-500">m ascenso</p>
-            </div>
-            <div class="bg-gray-50 rounded p-3">
-                <p class="text-xl font-bold text-red-700">-{{ route.elevation_loss_m|default:"—" }}</p>
-                <p class="text-xs text-gray-500">m descenso</p>
-            </div>
-            <div class="bg-gray-50 rounded p-3">
-                <p class="text-xl font-bold text-gray-900">{{ route.max_elevation_m|default:"—" }}</p>
-                <p class="text-xs text-gray-500">m máx. altitud</p>
-            </div>
-        </div>
-    </div>
+{# Breadcrumb #}
+<a href="{% url 'routes:list' %}"
+   style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
+  ← Rutas
+</a>
 
-    {% if route.track_geojson %}
-    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
-        <div id="map" class="w-full h-96"></div>
+{# Cabecera #}
+<div style="margin-bottom:18px;">
+  <h1 style="font-family:var(--font-title);font-weight:800;font-size:clamp(22px,4vw,32px);letter-spacing:-.7px;color:var(--text);line-height:1.1;">{{ route.title }}</h1>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+    <div class="avatar" style="width:24px;height:24px;font-size:9px;">
+      {{ route.author.first_name|slice:":1"|upper|default:route.author.email|slice:":1"|upper }}
     </div>
-    {% endif %}
-
-    <div class="bg-white rounded-lg shadow p-4">
-        <a href="{{ route.gpx_file.url }}" download
-           class="text-sm text-blue-600 hover:underline">
-            Descargar archivo GPX
-        </a>
-    </div>
+    <span style="font-family:var(--font-body);font-size:13px;color:var(--dim);">
+      {{ route.author.get_full_name|default:route.author.email }}
+      · subida el {{ route.created_at|date:"d/m/Y" }}
+    </span>
+  </div>
 </div>
+
+{# Mapa Leaflet #}
+<div style="border-radius:var(--radius-xl);border:1px solid var(--border);overflow:hidden;background:var(--surface);aspect-ratio:21/9;position:relative;margin-bottom:18px;min-height:260px;">
+  <div id="map" style="width:100%;height:100%;min-height:260px;"></div>
+  {% if route.gpx_file %}
+  <a href="{{ route.gpx_file.url }}" download
+     style="position:absolute;bottom:14px;right:14px;z-index:1000;background:var(--accent);color:var(--ac-text);border-radius:10px;padding:8px 14px;font-family:var(--font-body);font-weight:700;font-size:12px;text-decoration:none;">
+    ↓ Descargar GPX
+  </a>
+  {% endif %}
+</div>
+
+{# Stats #}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:18px;">
+  <div class="card">
+    <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);font-weight:500;margin-bottom:5px;">Distancia</div>
+    <div style="display:flex;align-items:baseline;gap:4px;">
+      <span style="font-family:var(--font-title);font-weight:800;font-size:26px;color:var(--text);">{{ route.distance_km|default:"—" }}</span>
+      <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);font-weight:600;">km</span>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);font-weight:500;margin-bottom:5px;">Desnivel+</div>
+    <div style="display:flex;align-items:baseline;gap:4px;">
+      <span style="font-family:var(--font-title);font-weight:800;font-size:26px;color:var(--text);">{{ route.elevation_gain_m|default:"—" }}</span>
+      <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);font-weight:600;">m</span>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);font-weight:500;margin-bottom:5px;">Desnivel−</div>
+    <div style="display:flex;align-items:baseline;gap:4px;">
+      <span style="font-family:var(--font-title);font-weight:800;font-size:26px;color:var(--text);">{{ route.elevation_loss_m|default:"—" }}</span>
+      <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);font-weight:600;">m</span>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);font-weight:500;margin-bottom:5px;">Cota máx.</div>
+    <div style="display:flex;align-items:baseline;gap:4px;">
+      <span style="font-family:var(--font-title);font-weight:800;font-size:26px;color:var(--text);">{{ route.max_elevation_m|default:"—" }}</span>
+      <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);font-weight:600;">m</span>
+    </div>
+  </div>
+</div>
+
+{# Perfil de elevación #}
+{% if route.elevation_profile %}
+<div class="card" style="margin-bottom:18px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <span style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);">Perfil de elevación</span>
+    <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">extraído del GPX</span>
+  </div>
+  <canvas id="elevation-chart" style="height:120px;max-height:120px;"></canvas>
+</div>
+{% endif %}
+
+{# Descripción #}
+{% if route.description %}
+<div class="card">
+  <h2 style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);margin-bottom:10px;">Descripción</h2>
+  <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);line-height:1.6;">{{ route.description }}</p>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
-{% if route.track_geojson %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const trackPoints = {{ route.track_geojson|safe }};
-if (trackPoints && trackPoints.length > 0) {
-    const map = L.map('map');
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-    const polyline = L.polyline(trackPoints, {color: '#dc2626', weight: 3}).addTo(map);
-    map.fitBounds(polyline.getBounds(), {padding: [20, 20]});
-    L.marker(trackPoints[0]).addTo(map).bindPopup('Inicio');
-    L.marker(trackPoints[trackPoints.length - 1]).addTo(map).bindPopup('Fin');
-}
+(function () {
+  var trackGeojson = {{ route.track_geojson|default:"null"|safe }};
+  var map = L.map(document.getElementById('map'));
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  if (trackGeojson && trackGeojson.length > 1) {
+    var latlngs = trackGeojson.map(function(p) { return [p.lat, p.lon]; });
+    var polyline = L.polyline(latlngs, { color: '#f2a93c', weight: 3, opacity: .9 }).addTo(map);
+    map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+  } else {
+    map.setView([40.4, -3.7], 6);
+  }
+
+  var elevProfile = {{ route.elevation_profile|default:"null"|safe }};
+  if (elevProfile && elevProfile.length) {
+    var chartEl = document.getElementById('elevation-chart');
+    if (chartEl) {
+      var labels = elevProfile.map(function(p) { return p.distance_km ? parseFloat(p.distance_km).toFixed(1) : ''; });
+      var values = elevProfile.map(function(p) { return p.elevation_m || 0; });
+      var step = Math.max(1, Math.ceil(labels.length / 4));
+      var shownLabels = labels.map(function(l, i) {
+        return (i === 0 || i % step === 0 || i === labels.length - 1) ? l + ' km' : '';
+      });
+      var accent = '#f2a93c';
+      var dim = '#a59885';
+      try {
+        var cs = getComputedStyle(document.documentElement);
+        accent = cs.getPropertyValue('--accent').trim() || accent;
+        dim = cs.getPropertyValue('--dim').trim() || dim;
+      } catch(e) {}
+      new Chart(chartEl, {
+        type: 'bar',
+        data: {
+          labels: shownLabels,
+          datasets: [{ data: values, backgroundColor: accent, borderRadius: 3, borderSkipped: false }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(c) { return c.raw + ' m'; },
+                title: function(c) { return labels[c[0].dataIndex] + ' km'; }
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: dim, font: { family: 'IBM Plex Mono', size: 11 }, maxRotation: 0 } },
+            y: { grid: { color: 'rgba(150,130,100,.1)' }, ticks: { color: dim, font: { family: 'IBM Plex Mono', size: 11 } } }
+          }
+        }
+      });
+    }
+  }
+})();
 </script>
-{% endif %}
 {% endblock %}

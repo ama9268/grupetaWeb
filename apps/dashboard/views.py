@@ -1,3 +1,4 @@
+from django.db.models import Sum, Count
 from django.utils import timezone
 from django.views.generic import TemplateView
 
@@ -6,6 +7,7 @@ from apps.accounts.models import UserProfile
 from apps.events.models import Event
 from apps.media_gallery.models import MediaItem
 from apps.blog.models import Post
+from apps.routes.models import Route
 
 
 class DashboardView(ApprovedUserMixin, TemplateView):
@@ -14,12 +16,33 @@ class DashboardView(ApprovedUserMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         now = timezone.now()
-        ctx['upcoming_events'] = Event.objects.filter(
+
+        upcoming = Event.objects.filter(
             date__gte=now
-        ).select_related('created_by').order_by('date')[:5]
-        ctx['recent_media'] = MediaItem.objects.order_by('-created_at')[:8]
-        ctx['recent_posts'] = Post.objects.select_related('author').order_by('-created_at')[:5]
+        ).select_related('created_by', 'associated_route').order_by('date')
+
+        ctx['next_event'] = upcoming.first()
+        ctx['upcoming_events'] = upcoming[1:4]
+        ctx['recent_media'] = MediaItem.objects.filter(
+            media_type='image'
+        ).select_related('uploaded_by').order_by('-created_at')[:8]
+        ctx['recent_posts'] = Post.objects.select_related('author').order_by('-created_at')[:4]
         ctx['top_members'] = UserProfile.objects.filter(
             status='approved'
-        ).select_related('user').order_by('-total_km')[:10]
+        ).select_related('user').order_by('-total_km')[:3]
+
+        agg = Route.objects.aggregate(
+            total_km=Sum('distance_km'),
+            total_elevation=Sum('elevation_gain_m'),
+            total_routes=Count('pk'),
+        )
+        ctx['club_stats'] = {
+            'km': int(agg['total_km'] or 0),
+            'elevation': int(agg['total_elevation'] or 0),
+            'routes': agg['total_routes'],
+            'members': UserProfile.objects.filter(status='approved').count(),
+        }
+
+        user = self.request.user
+        ctx['display_name'] = user.first_name or user.email.split('@')[0]
         return ctx

@@ -1,46 +1,105 @@
 {% extends 'base.html' %}
-{% block title %}Blog — GrupetaWeb{% endblock %}
+{% block title %}Blog{% endblock %}
+
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Blog</h1>
-    <a href="{% url 'blog:create' %}" class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">
-        + Nuevo post
-    </a>
+
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px;">
+  <div>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:30px;letter-spacing:-.6px;color:var(--text);">Blog</h1>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">Historias y crónicas de la grupeta</p>
+  </div>
+  <a href="{% url 'blog:create' %}" class="btn-primary">+ Escribir post</a>
 </div>
 
-<div class="space-y-6">
-    {% for post in posts %}
-    <article class="bg-white rounded-lg shadow p-6">
-        {% if post.header_image %}
-        <img src="{{ post.header_image.url }}" alt="{{ post.title }}"
-             class="w-full h-48 object-cover rounded-lg mb-4">
-        {% endif %}
-        <h2 class="text-xl font-semibold text-gray-900">
-            <a href="{% url 'blog:detail' post.pk %}" class="hover:text-blue-700">{{ post.title }}</a>
-        </h2>
-        <p class="text-sm text-gray-500 mt-1">
-            {{ post.author.get_full_name|default:post.author.email }} · {{ post.created_at|date:"d/m/Y" }}
-        </p>
-        <p class="mt-3 text-gray-700 line-clamp-3">{{ post.content|truncatewords:40 }}</p>
-        <div class="mt-3 flex items-center space-x-4 text-sm text-gray-500">
-            <span>{{ post.comments.count }} comentarios</span>
-            <span>{{ post.likes_count }} likes</span>
-        </div>
-    </article>
-    {% empty %}
-    <p class="text-gray-500 text-center py-12">No hay posts todavía. ¡Escribe el primero!</p>
-    {% endfor %}
-</div>
+{% if posts %}
 
-{% if is_paginated %}
-<div class="mt-8 flex justify-center space-x-2">
-    {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded text-sm">Anterior</a>
-    {% endif %}
-    <span class="px-3 py-1 text-sm text-gray-600">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded text-sm">Siguiente</a>
-    {% endif %}
+{# Post destacado (primero) #}
+{% with featured=posts.0 %}
+<a href="{% url 'blog:detail' featured.pk %}"
+   style="display:block;border-radius:var(--radius-xl);border:1px solid var(--border);background:var(--surface);overflow:hidden;text-decoration:none;margin-bottom:16px;transition:box-shadow .2s ease;"
+   onmouseenter="this.style.boxShadow='var(--shadow-md)'"
+   onmouseleave="this.style.boxShadow='none'">
+  {% if featured.header_image %}
+  <div style="aspect-ratio:21/8;overflow:hidden;">
+    <img src="{{ featured.header_image.url }}" alt="{{ featured.title }}"
+         style="width:100%;height:100%;object-fit:cover;">
+  </div>
+  {% else %}
+  <div style="aspect-ratio:21/8;background:var(--bg);display:flex;align-items:center;justify-content:center;min-height:120px;">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);">
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+    </svg>
+  </div>
+  {% endif %}
+  <div style="padding:18px 20px;">
+    <div style="font-family:var(--font-body);font-weight:600;font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Destacado</div>
+    <div style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);line-height:1.15;margin-bottom:8px;">{{ featured.title }}</div>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);line-height:1.5;margin-bottom:14px;">
+      {{ featured.content|striptags|truncatewords:28 }}
+    </p>
+    <div style="display:flex;align-items:center;gap:9px;">
+      <div class="avatar" style="width:26px;height:26px;font-size:10px;">
+        {{ featured.author.first_name|slice:":1"|upper|default:featured.author.email|slice:":1"|upper }}
+      </div>
+      <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);">
+        {{ featured.author.get_full_name|default:featured.author.email }} · {{ featured.created_at|date:"d/m/Y" }}
+      </span>
+      <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-left:auto;">♥ {{ featured.likes_count }}</span>
+    </div>
+  </div>
+</a>
+{% endwith %}
+
+{# Lista de posts restantes #}
+{% if posts|length > 1 %}
+<div style="display:flex;flex-direction:column;gap:12px;">
+  {% for post in posts %}
+  {% if not forloop.first %}
+  <a href="{% url 'blog:detail' post.pk %}"
+     style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);text-decoration:none;transition:box-shadow .15s ease;"
+     onmouseenter="this.style.boxShadow='var(--shadow-sm)'"
+     onmouseleave="this.style.boxShadow='none'">
+    {# Thumbnail #}
+    <div style="width:64px;height:64px;border-radius:11px;border:1px solid var(--border);overflow:hidden;flex-shrink:0;background:var(--bg);display:flex;align-items:center;justify-content:center;">
+      {% if post.header_image %}
+      <img src="{{ post.header_image.url }}" alt="{{ post.title }}" style="width:100%;height:100%;object-fit:cover;">
+      {% else %}
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--border);">
+        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+      </svg>
+      {% endif %}
+    </div>
+    {# Info #}
+    <div style="flex:1;min-width:0;">
+      <div style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.2px;">{{ post.title }}</div>
+      <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-top:3px;">
+        {{ post.author.get_full_name|default:post.author.email }} · {{ post.created_at|date:"d/m/Y" }} · ♥ {{ post.likes_count }}
+      </div>
+    </div>
+  </a>
+  {% endif %}
+  {% endfor %}
 </div>
 {% endif %}
+
+{# Paginación #}
+{% if is_paginated %}
+<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:28px;">
+  {% if page_obj.has_previous %}
+  <a href="?page={{ page_obj.previous_page_number }}" class="btn-secondary" style="padding:8px 16px;font-size:13px;">← Anterior</a>
+  {% endif %}
+  <span style="font-family:var(--font-mono);font-size:12px;color:var(--dim);">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+  <a href="?page={{ page_obj.next_page_number }}" class="btn-secondary" style="padding:8px 16px;font-size:13px;">Siguiente →</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div style="text-align:center;padding:64px 20px;">
+  <p style="font-family:var(--font-body);font-size:15px;color:var(--dim);margin-bottom:16px;">Aún no hay posts. ¡Escribe el primero!</p>
+  <a href="{% url 'blog:create' %}" class="btn-primary">+ Escribir post</a>
+</div>
+{% endif %}
+
 {% endblock %}

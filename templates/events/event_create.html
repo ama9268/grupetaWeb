@@ -1,25 +1,47 @@
 {% extends 'base.html' %}
-{% block title %}Nuevo evento — GrupetaWeb{% endblock %}
+{% block title %}Crear evento{% endblock %}
+
 {% block content %}
-<div class="max-w-lg mx-auto bg-white rounded-lg shadow p-8">
-    <h1 class="text-xl font-bold text-gray-900 mb-6">Crear nuevo evento</h1>
-    <form method="post" class="space-y-4">
-        {% csrf_token %}
-        {% for field in form %}
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<p class="text-red-600 text-xs mt-1">{{ field.errors.0 }}</p>{% endif %}
-        </div>
-        {% endfor %}
-        <div class="flex space-x-3 pt-2">
-            <button type="submit" class="bg-gray-900 text-white px-6 py-2 rounded hover:bg-gray-700 text-sm">
-                Crear evento
-            </button>
-            <a href="{% url 'events:list' %}" class="border border-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-50 text-sm">
-                Cancelar
-            </a>
-        </div>
+<div style="max-width:520px;margin:0 auto;">
+  <a href="{% url 'events:list' %}"
+     style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
+    ← Eventos
+  </a>
+  <div class="card" style="border-radius:var(--radius-xl);padding:24px;">
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);margin-bottom:20px;">Crear evento</h1>
+
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="form-group">
+        <label class="form-label" for="{{ field.auto_id }}">{{ field.label }}</label>
+        {% if field.field.widget.input_type == 'textarea' %}
+        <textarea class="input" name="{{ field.html_name }}" id="{{ field.auto_id }}"
+                  style="height:auto;min-height:88px;padding:10px 13px;resize:vertical;"
+                  {% if field.field.required %}required{% endif %}>{{ field.value|default:"" }}</textarea>
+        {% elif field.field.widget.input_type == 'select' %}
+        <select class="input select" name="{{ field.html_name }}" id="{{ field.auto_id }}">
+          {% for val, label in field.field.choices %}
+          <option value="{{ val }}" {% if field.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <input class="input" type="{{ field.field.widget.input_type }}"
+               name="{{ field.html_name }}" id="{{ field.auto_id }}"
+               {% if field.value %}value="{{ field.value }}"{% endif %}
+               {% if field.field.required %}required{% endif %}>
+        {% endif %}
+        {% if field.errors %}
+        <p class="form-error">{{ field.errors.0 }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button type="submit" class="btn-primary" style="flex:1;">Crear evento</button>
+        <a href="{% url 'events:list' %}" class="btn-secondary">Cancelar</a>
+      </div>
     </form>
+  </div>
 </div>
 {% endblock %}

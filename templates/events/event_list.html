@@ -1,56 +1,100 @@
 {% extends 'base.html' %}
-{% block title %}Eventos — GrupetaWeb{% endblock %}
+{% block title %}Eventos{% endblock %}
+
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Eventos</h1>
-    {% if request.user.profile.is_moderator %}
-    <a href="{% url 'events:create' %}"
-       class="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">
-        + Nuevo evento
-    </a>
-    {% endif %}
+
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px;">
+  <div>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:30px;letter-spacing:-.6px;color:var(--text);">Eventos</h1>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">Próximas y pasadas salidas de la grupeta</p>
+  </div>
+  {% if request.user.profile.role in 'admin,moderator' or request.user.profile.is_moderator %}
+  <a href="{% url 'events:create' %}" class="btn-primary">+ Crear evento</a>
+  {% endif %}
 </div>
 
+{# ===== Próximos ===== #}
 {% if upcoming %}
-<h2 class="text-lg font-semibold text-gray-700 mb-3">Próximos eventos</h2>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-    {% for event in upcoming %}
-    <a href="{% url 'events:detail' event.pk %}"
-       class="block bg-white rounded-lg shadow hover:shadow-md transition p-5">
-        <div class="flex justify-between items-start">
-            <div>
-                <h3 class="font-semibold text-gray-900">{{ event.title }}</h3>
-                {% if event.location %}
-                <p class="text-sm text-gray-500 mt-1">{{ event.location }}</p>
-                {% endif %}
-            </div>
-            <div class="text-right text-sm flex-shrink-0 ml-3">
-                <p class="font-bold text-gray-900">{{ event.date|date:"d/m" }}</p>
-                <p class="text-gray-500">{{ event.date|time:"H:i" }}</p>
-            </div>
+<h2 style="font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--text);margin-bottom:12px;">Próximos</h2>
+<div style="display:flex;flex-direction:column;gap:13px;margin-bottom:28px;">
+  {% for event in upcoming %}
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);">
+
+    {# Badge fecha #}
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:13px;padding:10px 0;text-align:center;width:64px;flex-shrink:0;">
+      <div style="font-family:var(--font-mono);font-weight:700;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;">{{ event.date|date:"D" }}</div>
+      <div style="font-family:var(--font-title);font-weight:800;font-size:24px;line-height:1.1;color:var(--text);">{{ event.date|date:"j" }}</div>
+      <div style="font-family:var(--font-mono);font-weight:700;font-size:10px;color:var(--dim);text-transform:uppercase;">{{ event.date|date:"M" }}</div>
+    </div>
+
+    {# Info #}
+    <div style="flex:1;min-width:160px;">
+      <a href="{% url 'events:detail' event.pk %}"
+         style="font-family:var(--font-title);font-weight:800;font-size:17px;color:var(--text);text-decoration:none;letter-spacing:-.2px;">{{ event.title }}</a>
+      <div style="font-family:var(--font-body);font-size:13px;color:var(--dim);margin-top:4px;">
+        {{ event.date|date:"H:i" }}
+        {% if event.location %} · {{ event.location }}{% endif %}
+        {% if event.associated_route %} · {{ event.associated_route.distance_km }} km{% endif %}
+      </div>
+    </div>
+
+    {# Derecha: avatares + botón #}
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      {% with count=event.attending_count %}
+      {% if count %}
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="display:flex;">
+          {% for rsvp in event.rsvps.all|slice:":3" %}
+          <div class="avatar" style="width:28px;height:28px;font-size:10px;margin-left:-6px;border:2px solid var(--surface);">
+            {{ rsvp.user.first_name|slice:":1"|upper|default:rsvp.user.email|slice:":1"|upper }}
+          </div>
+          {% endfor %}
         </div>
-        <p class="text-xs text-green-700 mt-2">{{ event.attending_count }} confirmados</p>
-    </a>
-    {% endfor %}
+        <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);">{{ count }} van</span>
+      </div>
+      {% endif %}
+      {% endwith %}
+      <form method="post" action="{% url 'events:rsvp' event.pk 'attending' %}"
+            hx-post="{% url 'events:rsvp' event.pk 'attending' %}"
+            hx-target="#rsvp-widget-{{ event.pk }}"
+            hx-swap="outerHTML">
+        {% csrf_token %}
+        <button type="submit"
+                style="background:var(--accent);color:var(--ac-text);border:none;border-radius:9px;padding:7px 18px;font-family:var(--font-body);font-weight:700;font-size:12px;cursor:pointer;">
+          Voy
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
 </div>
 {% endif %}
 
+{# ===== Pasados ===== #}
 {% if past %}
-<h2 class="text-lg font-semibold text-gray-500 mb-3">Eventos pasados</h2>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {% for event in past %}
-    <a href="{% url 'events:detail' event.pk %}"
-       class="block bg-gray-50 rounded-lg border border-gray-200 p-5 hover:bg-white transition">
-        <div class="flex justify-between items-start">
-            <h3 class="font-medium text-gray-600">{{ event.title }}</h3>
-            <p class="text-sm text-gray-400 flex-shrink-0 ml-3">{{ event.date|date:"d/m/Y" }}</p>
-        </div>
-    </a>
-    {% endfor %}
+<h2 style="font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--text);margin-bottom:12px;">Pasados</h2>
+<div style="display:flex;flex-direction:column;gap:10px;opacity:.7;">
+  {% for event in past reversed %}
+  <a href="{% url 'events:detail' event.pk %}"
+     style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);text-decoration:none;">
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:7px 0;text-align:center;width:52px;flex-shrink:0;">
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);text-transform:uppercase;">{{ event.date|date:"D" }}</div>
+      <div style="font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--text);line-height:1.1;">{{ event.date|date:"j" }}</div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);text-transform:uppercase;">{{ event.date|date:"M" }}</div>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-family:var(--font-title);font-weight:800;font-size:15px;color:var(--text);">{{ event.title }}</div>
+      <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);">{{ event.attending_count }} asistentes</div>
+    </div>
+  </a>
+  {% endfor %}
 </div>
 {% endif %}
 
 {% if not upcoming and not past %}
-<p class="text-gray-500 text-center py-12">No hay eventos todavía.</p>
+<div style="text-align:center;padding:64px 20px;">
+  <p style="font-family:var(--font-body);font-size:15px;color:var(--dim);">No hay eventos programados todavía.</p>
+</div>
 {% endif %}
+
 {% endblock %}

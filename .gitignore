@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 
+# Virtualenv
+.venv/
+venv/
+
 # Python
 *.pyc
 *.pyo
