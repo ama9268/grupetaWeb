@@ -20,6 +20,7 @@ RUN npm run build:css
 RUN DJANGO_SETTINGS_MODULE=config.settings.production \
     DJANGO_SECRET_KEY=collectstatic-placeholder \
     DJANGO_ALLOWED_HOSTS=localhost \
+    DATABASE_URL=sqlite:////tmp/build.db \
     python manage.py collectstatic --noinput
 
 EXPOSE 8080
