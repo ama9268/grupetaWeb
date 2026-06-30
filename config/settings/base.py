@@ -30,7 +30,6 @@ THIRD_PARTY_APPS = [
     'storages',
     'cloudinary',
     'cloudinary_storage',
-    'debug_toolbar',
 ]
 
 LOCAL_APPS = [
@@ -56,7 +55,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -130,5 +128,3 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
 }
 
-# Django Debug Toolbar
-INTERNAL_IPS = ['127.0.0.1']
