@@ -30,14 +30,6 @@ CHANNEL_LAYERS = {
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-
-# Traefik termina el SSL y reenvía HTTP interno a Django.
-# Esta cabecera le dice a Django que la petición original era HTTPS.
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-# No redirigir a HTTPS desde Django: Traefik ya lo hace externamente.
-SECURE_SSL_REDIRECT = False
-
-# Necesario para que los formularios POST funcionen con HTTPS tras Traefik.
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
