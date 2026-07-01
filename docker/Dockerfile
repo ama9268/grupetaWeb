@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+ENV DJANGO_SETTINGS_MODULE=config.settings.production
+
 COPY requirements/ requirements/
 RUN pip install --no-cache-dir -r requirements/production.txt
 
@@ -17,8 +19,7 @@ COPY . .
 
 RUN npm run build:css
 
-RUN DJANGO_SETTINGS_MODULE=config.settings.production \
-    DJANGO_SECRET_KEY=collectstatic-placeholder \
+RUN DJANGO_SECRET_KEY=collectstatic-placeholder \
     DJANGO_ALLOWED_HOSTS=localhost \
     DATABASE_URL=sqlite:////tmp/build.db \
     python manage.py collectstatic --noinput
