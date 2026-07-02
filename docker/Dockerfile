@@ -24,6 +24,9 @@ RUN DJANGO_SECRET_KEY=collectstatic-placeholder \
     DATABASE_URL=sqlite:////tmp/build.db \
     python manage.py collectstatic --noinput
 
+RUN chmod +x docker/entrypoint.sh
+
 EXPOSE 8080
 
+ENTRYPOINT ["docker/entrypoint.sh"]
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8080", "config.asgi:application"]
