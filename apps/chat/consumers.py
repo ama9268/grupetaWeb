@@ -3,6 +3,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 
 from .models import ChatRoom, Message
+from .serializers import serialize_message
 
 HISTORY_LIMIT = 100
 PAGE_SIZE = 50
@@ -103,7 +104,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         msg = Message.objects.create(
             user=self.scope['user'], content=content, room=self.room
         )
-        return self._serialize(msg)
+        return serialize_message(msg)
 
     @database_sync_to_async
     def get_history(self):
@@ -115,7 +116,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         has_more = len(qs) > HISTORY_LIMIT
         qs = qs[:HISTORY_LIMIT]
         qs.reverse()
-        return [self._serialize(m) for m in qs], has_more
+        return [serialize_message(m) for m in qs], has_more
 
     @database_sync_to_async
     def get_older_messages(self, before_id):
@@ -127,13 +128,4 @@ class ChatConsumer(AsyncWebsocketConsumer):
         has_more = len(qs) > PAGE_SIZE
         qs = qs[:PAGE_SIZE]
         qs.reverse()
-        return [self._serialize(m) for m in qs], has_more
-
-    def _serialize(self, msg):
-        return {
-            'id': msg.pk,
-            # Identificador público = username (nunca el email).
-            'user': msg.user.username or 'Miembro',
-            'content': msg.content,
-            'timestamp': msg.created_at.strftime('%d/%m/%Y %H:%M'),
-        }
+        return [serialize_message(m) for m in qs], has_more

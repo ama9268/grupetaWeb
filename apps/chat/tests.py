@@ -179,6 +179,73 @@ def test_delete_message_marks_deleted_and_broadcasts(member_client, approved_mem
     assert msg.is_deleted is True
 
 
+# --- Adjuntos (subida HTTP + borrado en Cloudinary) ---
+
+# Cabecera PNG válida para que `filetype` reconozca el archivo como image/png.
+PNG_BYTES = b'\x89PNG\r\n\x1a\n' + b'\x00' * 64
+TXT_BYTES = b'esto no es una imagen ni un video, es texto plano' * 4
+
+
+@pytest.mark.django_db
+def test_upload_attachment_creates_message(member_client, approved_member, in_memory_channel_layer):
+    from unittest.mock import patch
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    room = ChatRoom.objects.create(slug='sala-adj', name='Adjuntos')
+    upload = SimpleUploadedFile('foto.png', PNG_BYTES, content_type='image/png')
+
+    with patch('apps.chat.views.upload_image', return_value=('grupetaweb/x', 'https://cdn/x.webp')) as m:
+        response = member_client.post(
+            reverse('chat:upload_attachment', args=['sala-adj']),
+            {'file': upload, 'caption': 'mira esto'},
+        )
+
+    assert response.status_code == 200
+    assert m.called
+    msg = Message.objects.get(room=room)
+    assert msg.attachment_type == 'image'
+    assert msg.attachment_url == 'https://cdn/x.webp'
+    assert msg.attachment_public_id == 'grupetaweb/x'
+    assert msg.content == 'mira esto'
+
+
+@pytest.mark.django_db
+def test_upload_rejects_non_media_file(member_client, approved_member):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    ChatRoom.objects.create(slug='sala-adj2', name='Adjuntos2')
+    bad = SimpleUploadedFile('nota.txt', TXT_BYTES, content_type='text/plain')
+    response = member_client.post(
+        reverse('chat:upload_attachment', args=['sala-adj2']), {'file': bad}
+    )
+    assert response.status_code == 400
+    assert Message.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_upload_rejected_on_archived_room(member_client, approved_member):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    ChatRoom.objects.create(slug='sala-arch', name='Archivada', is_archived=True)
+    upload = SimpleUploadedFile('foto.png', PNG_BYTES, content_type='image/png')
+    response = member_client.post(
+        reverse('chat:upload_attachment', args=['sala-arch']), {'file': upload}
+    )
+    assert response.status_code == 403
+    assert Message.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_delete_message_removes_cloudinary_asset(member_client, approved_member, in_memory_channel_layer):
+    from unittest.mock import patch
+    room = ChatRoom.objects.create(slug='sala-del', name='Del')
+    msg = Message.objects.create(
+        room=room, user=approved_member, attachment_type='video',
+        attachment_url='https://cdn/v.mp4', attachment_public_id='grupetaweb/v',
+    )
+    with patch('apps.chat.views.delete_asset') as m:
+        response = member_client.post(reverse('chat:delete_message', args=[msg.pk]))
+    assert response.status_code == 302
+    m.assert_called_once_with('grupetaweb/v', resource_type='video')
+
+
 @pytest.mark.django_db(transaction=True)
 async def test_websocket_archived_room_is_read_only(in_memory_channel_layer):
     user = await create_chat_user()

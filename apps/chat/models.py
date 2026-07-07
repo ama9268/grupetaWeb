@@ -23,11 +23,23 @@ class ChatRoom(models.Model):
 
 
 class Message(models.Model):
+    class Attachment(models.TextChoices):
+        IMAGE = 'image', 'Imagen'
+        VIDEO = 'video', 'Vídeo'
+
     room = models.ForeignKey(
         ChatRoom, on_delete=models.CASCADE, related_name='messages'
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_messages')
-    content = models.TextField()
+    # El contenido es opcional: un mensaje puede ser solo texto, solo adjunto,
+    # o texto + adjunto (pie de foto).
+    content = models.TextField(blank=True)
+    # Adjunto en Cloudinary (imagen o vídeo). Vacío en mensajes de solo texto.
+    attachment_type = models.CharField(
+        max_length=10, choices=Attachment.choices, blank=True
+    )
+    attachment_url = models.URLField(max_length=500, blank=True)
+    attachment_public_id = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_deleted = models.BooleanField(default=False)
     deleted_by = models.ForeignKey(
