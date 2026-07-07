@@ -24,9 +24,11 @@ STORAGES = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'mediafiles'
 
+# Mismo backend Pub/Sub que producción (ver nota en production.py) para que
+# el comportamiento del chat sea idéntico en local y en el VPS.
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'BACKEND': 'channels_redis.pubsub.RedisPubSubChannelLayer',
         'CONFIG': {
             'hosts': [env('REDIS_URL', default='redis://localhost:6379/0')],
         },

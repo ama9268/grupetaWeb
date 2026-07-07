@@ -17,10 +17,15 @@ STORAGES = {
     },
 }
 
-# Canales Redis en producción
+# Canales Redis en producción.
+# Se usa el backend Pub/Sub (no el `core.RedisChannelLayer`): este mantiene
+# una suscripción persistente y NO hace lecturas bloqueantes con timeout de
+# socket (BZPOPMIN). El backend `core` provocaba `redis TimeoutError` cada
+# pocos segundos con el Redis compartido de Dokploy, matando el consumer y
+# cerrando el WebSocket ("Desconectado").
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'BACKEND': 'channels_redis.pubsub.RedisPubSubChannelLayer',
         'CONFIG': {
             'hosts': [env('REDIS_URL', default='redis://redis:6379/0')],
         },
