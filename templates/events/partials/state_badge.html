@@ -1,0 +1,9 @@
+{# Badge de estado del evento. Espera: state (valor), label (texto). #}
+<span style="display:inline-flex;align-items:center;font-family:var(--font-mono);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:999px;
+{% if state == 'aceptado' %}background:var(--accent-soft);color:var(--accent);
+{% elif state == 'realizado' %}background:rgba(52,199,89,.14);color:var(--online);
+{% elif state == 'cancelado' %}background:rgba(255,69,58,.12);color:var(--error);
+{% elif state == 'superado' %}background:var(--surface2);color:var(--dim);
+{% else %}background:var(--bg);color:var(--dim);border:1px solid var(--border);{% endif %}">
+  {{ label }}
+</span>

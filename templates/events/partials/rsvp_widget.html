@@ -1,33 +1,22 @@
 <div id="rsvp-widget-{{ event.pk }}" class="card" style="border-radius:var(--radius-xl);">
   <div style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);margin-bottom:12px;">¿Vas al evento?</div>
 
-  <div style="display:flex;gap:9px;margin-bottom:16px;">
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    {% for value, label, icon in rsvp_options %}
     <form style="flex:1;"
-          method="post" action="{% url 'events:rsvp' event.pk 'attending' %}"
-          hx-post="{% url 'events:rsvp' event.pk 'attending' %}"
+          method="post" action="{% url 'events:rsvp' event.pk value %}"
+          hx-post="{% url 'events:rsvp' event.pk value %}"
           hx-target="#rsvp-widget-{{ event.pk }}"
           hx-swap="outerHTML">
       {% csrf_token %}
       <button type="submit"
-              style="width:100%;padding:11px 0;border-radius:11px;border:none;cursor:pointer;font-family:var(--font-body);font-weight:700;font-size:14px;transition:filter .15s ease;
-              {% if user_rsvp.response == 'attending' %}background:var(--accent);color:var(--ac-text);
+              style="width:100%;padding:11px 0;border-radius:11px;cursor:pointer;font-family:var(--font-body);font-weight:700;font-size:13px;transition:filter .15s ease;
+              {% if user_rsvp.response == value %}background:var(--accent);color:var(--ac-text);border:none;
               {% else %}background:var(--bg);border:1px solid var(--border);color:var(--text);{% endif %}">
-        ✓ Voy
+        {{ icon }} {{ label }}
       </button>
     </form>
-    <form style="flex:1;"
-          method="post" action="{% url 'events:rsvp' event.pk 'not_attending' %}"
-          hx-post="{% url 'events:rsvp' event.pk 'not_attending' %}"
-          hx-target="#rsvp-widget-{{ event.pk }}"
-          hx-swap="outerHTML">
-      {% csrf_token %}
-      <button type="submit"
-              style="width:100%;padding:11px 0;border-radius:11px;cursor:pointer;font-family:var(--font-body);font-weight:700;font-size:14px;
-              {% if user_rsvp.response == 'not_attending' %}background:var(--surface2);color:var(--text);border:1px solid var(--border);
-              {% else %}background:var(--bg);border:1px solid var(--border);color:var(--text);{% endif %}">
-        ✕ No puedo
-      </button>
-    </form>
+    {% endfor %}
   </div>
 
   {% if attendees %}
@@ -38,10 +27,10 @@
     {% for rsvp in attendees %}
     <div style="display:flex;align-items:center;gap:9px;">
       <div class="avatar" style="width:28px;height:28px;font-size:10px;flex-shrink:0;">
-        {{ rsvp.user.first_name|slice:":1"|upper|default:rsvp.user.email|slice:":1"|upper }}
+        {{ rsvp.member.username|slice:":1"|upper|default:'M' }}
       </div>
       <span style="font-family:var(--font-body);font-size:13px;color:var(--text);flex:1;">
-        {{ rsvp.user.get_full_name|default:rsvp.user.email }}
+        {{ rsvp.member.username|default:"Miembro" }}
       </span>
       <span class="dot-online"></span>
     </div>

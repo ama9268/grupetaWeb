@@ -1,6 +1,14 @@
 {% extends 'base.html' %}
 {% block title %}{{ event.title }}{% endblock %}
 
+{% block extra_head %}
+{% if event.associated_route %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 
 <a href="{% url 'events:list' %}"
@@ -11,21 +19,55 @@
 {# Hero #}
 <div style="border-radius:var(--radius-xl);border:1px solid var(--border);background:var(--surface);overflow:hidden;margin-bottom:20px;">
   <div style="aspect-ratio:21/8;background:var(--bg);position:relative;display:flex;align-items:center;justify-content:center;min-height:160px;">
+    {% if event.image_url %}
+    <img src="{{ event.image_url }}" alt="{{ event.title }}" style="width:100%;height:100%;object-fit:cover;">
+    {% else %}
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);">
       <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
-    <div style="position:absolute;top:16px;left:16px;background:var(--accent);color:var(--ac-text);border-radius:11px;padding:8px 12px;text-align:center;min-width:52px;">
-      <div style="font-family:var(--font-mono);font-weight:700;font-size:9px;text-transform:uppercase;">{{ event.date|date:"D" }}</div>
-      <div style="font-family:var(--font-title);font-weight:800;font-size:20px;line-height:1.1;">{{ event.date|date:"j" }}</div>
-      <div style="font-family:var(--font-mono);font-weight:700;font-size:9px;text-transform:uppercase;">{{ event.date|date:"M" }}</div>
+    {% endif %}
+    <div style="position:absolute;top:16px;left:16px;display:flex;gap:8px;align-items:center;">
+      <div style="background:var(--accent);color:var(--ac-text);border-radius:11px;padding:8px 12px;text-align:center;min-width:52px;">
+        <div style="font-family:var(--font-mono);font-weight:700;font-size:9px;text-transform:uppercase;">{{ event.start_at|date:"D" }}</div>
+        <div style="font-family:var(--font-title);font-weight:800;font-size:20px;line-height:1.1;">{{ event.start_at|date:"j" }}</div>
+        <div style="font-family:var(--font-mono);font-weight:700;font-size:9px;text-transform:uppercase;">{{ event.start_at|date:"M" }}</div>
+      </div>
+    </div>
+    <div style="position:absolute;top:16px;right:16px;">
+      {% include 'events/partials/state_badge.html' with state=event.state label=event.get_state_display %}
     </div>
   </div>
   <div style="padding:20px 22px;">
-    <h1 style="font-family:var(--font-title);font-weight:800;font-size:clamp(20px,4vw,28px);letter-spacing:-.5px;color:var(--text);">{{ event.title }}</h1>
-    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:6px;">
-      {{ event.date|date:"l, d \d\e F \d\e Y" }} a las {{ event.date|date:"H:i" }}
-      {% if event.location %} · {{ event.location }}{% endif %}
-    </p>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:4px;">{{ event.get_event_type_display }}</div>
+        <h1 style="font-family:var(--font-title);font-weight:800;font-size:clamp(20px,4vw,28px);letter-spacing:-.5px;color:var(--text);">{{ event.title }}</h1>
+        <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:6px;">
+          {{ event.start_at|date:"l, d \d\e F \d\e Y" }} a las {{ event.start_at|date:"H:i" }}
+          {% if event.location %} · {{ event.location }}{% endif %}
+        </p>
+      </div>
+
+      {# Acciones de moderador #}
+      {% if can_moderate %}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        {% if event.state == 'pendiente' %}
+        <form method="post" action="{% url 'events:accept' event.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-primary" style="font-size:13px;">Aceptar</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'events:edit' event.pk %}" class="btn-secondary" style="font-size:13px;">Editar</a>
+        {% if event.state != 'cancelado' %}
+        <form method="post" action="{% url 'events:cancel' event.pk %}"
+              onsubmit="return confirm('¿Cancelar este evento? Su chat y álbum quedarán en solo lectura.');">
+          {% csrf_token %}
+          <button type="submit" class="btn-secondary" style="font-size:13px;color:var(--error);">Cancelar evento</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
   </div>
 </div>
 
@@ -39,38 +81,84 @@
     <div style="font-family:var(--font-body);font-size:14px;line-height:1.6;color:var(--text);">{{ event.description|linebreaks }}</div>
     {% endif %}
 
-    {# Ruta asociada #}
+    {# Ruta asociada: mapa + stats #}
     {% if event.associated_route %}
-    <div class="card">
-      <div style="font-family:var(--font-title);font-weight:800;font-size:15px;color:var(--text);margin-bottom:10px;">Ruta asociada</div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:70px;height:54px;border-radius:10px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dim);">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </svg>
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--text);">{{ event.associated_route.title }}</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);">
-            {{ event.associated_route.distance_km|default:"—" }} km
-            {% if event.associated_route.elevation_gain_m %} · +{{ event.associated_route.elevation_gain_m }} m{% endif %}
-          </div>
-        </div>
-        <a href="{% url 'routes:detail' event.associated_route.pk %}"
-           style="font-family:var(--font-body);font-weight:700;font-size:13px;color:var(--accent);text-decoration:none;flex-shrink:0;">Ver →</a>
+    <div>
+      <div style="font-family:var(--font-title);font-weight:800;font-size:15px;color:var(--text);margin-bottom:10px;">
+        Ruta asociada: <a href="{% url 'routes:detail' event.associated_route.pk %}" style="color:var(--accent);text-decoration:none;">{{ event.associated_route.title }} →</a>
       </div>
+      {% include 'routes/partials/route_map.html' with route=event.associated_route %}
+    </div>
+    {% endif %}
+
+    {# Álbum de fotos y vídeos #}
+    {% if album %}
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span style="font-family:var(--font-title);font-weight:800;font-size:15px;color:var(--text);">Galería del evento</span>
+        <a href="{% url 'media_gallery:list' %}" style="font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--accent);text-decoration:none;">Ver en Galería →</a>
+      </div>
+
+      {% if media_items %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:14px;">
+        {% for item in media_items %}
+        {% if item.media_type == 'image' %}
+        <img src="{{ item.cloudinary_url }}" alt="{{ item.title }}" loading="lazy"
+             style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--border);">
+        {% else %}
+        <video src="{{ item.cloudinary_url }}" controls
+               style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--border);background:#000;"></video>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <p style="font-family:var(--font-body);font-size:13px;color:var(--dim);margin-bottom:14px;">Aún no hay fotos ni vídeos.</p>
+      {% endif %}
+
+      {% if can_upload %}
+      <form method="post" action="{% url 'events:media_upload' event.pk %}" enctype="multipart/form-data"
+            style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:14px;">
+        {% csrf_token %}
+        <select name="media_type" class="input" required>
+          <option value="image">Imagen</option>
+          <option value="video">Vídeo</option>
+        </select>
+        <input type="file" name="file" class="input" required>
+        <input type="text" name="title" class="input" placeholder="Título (opcional)">
+        <button type="submit" class="btn-primary" style="font-size:13px;">Subir a la galería</button>
+      </form>
+      {% elif event.is_archived %}
+      <p style="font-family:var(--font-body);font-size:12px;color:var(--dim);border-top:1px solid var(--border);padding-top:12px;">Evento archivado: la galería es de solo lectura.</p>
+      {% endif %}
     </div>
     {% endif %}
 
   </div>
 
   {# Columna derecha: RSVP #}
-  <div style="flex:1 1 240px;min-width:0;">
+  <div style="flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:12px;">
     <div id="rsvp-widget-{{ event.pk }}">
       {% include 'events/partials/rsvp_widget.html' %}
     </div>
+    {% if maybe_count or no_count %}
+    <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);text-align:center;">
+      {% if maybe_count %}{{ maybe_count }} quizás{% endif %}{% if maybe_count and no_count %} · {% endif %}{% if no_count %}{{ no_count }} no van{% endif %}
+    </div>
+    {% endif %}
   </div>
 
 </div>
+
+{# Chat del evento #}
+{% if event.chat_room %}
+<div style="margin-top:24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+    <h2 style="font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--text);">Chat del evento</h2>
+    <a href="{% url 'chat:room_detail' event.chat_room.slug %}"
+       style="font-family:var(--font-body);font-weight:700;font-size:13px;color:var(--accent);text-decoration:none;">Abrir en Chat →</a>
+  </div>
+  {% include 'chat/partials/chat_panel.html' with room=event.chat_room %}
+</div>
+{% endif %}
 
 {% endblock %}

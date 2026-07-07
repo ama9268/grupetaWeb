@@ -4,7 +4,7 @@ from django.views.generic import TemplateView
 
 from apps.accounts.mixins import ApprovedUserMixin
 from apps.accounts.models import UserProfile
-from apps.events.models import Event
+from apps.events.models import Event, EventRSVP
 from apps.media_gallery.models import MediaItem
 from apps.blog.models import Post
 from apps.routes.models import Route
@@ -18,10 +18,20 @@ class DashboardView(ApprovedUserMixin, TemplateView):
         now = timezone.now()
 
         upcoming = Event.objects.filter(
-            date__gte=now
-        ).select_related('created_by', 'associated_route').order_by('date')
+            start_at__gte=now, state__in=Event.DEFAULT_LIST_STATES
+        ).select_related('created_by', 'associated_route').order_by('start_at')
 
-        ctx['next_event'] = upcoming.first()
+        next_event = upcoming.first()
+        ctx['next_event'] = next_event
+        # Solo los primeros asistentes confirmados (para los avatares), sin cargar todos los RSVP.
+        ctx['next_event_attendees'] = (
+            list(
+                next_event.rsvps.filter(response=EventRSVP.Response.SI)
+                .select_related('member')
+                .order_by('created_at')[:5]
+            )
+            if next_event else []
+        )
         ctx['upcoming_events'] = upcoming[1:4]
         ctx['recent_media'] = MediaItem.objects.filter(
             media_type='image'
@@ -44,5 +54,5 @@ class DashboardView(ApprovedUserMixin, TemplateView):
         }
 
         user = self.request.user
-        ctx['display_name'] = user.first_name or user.email.split('@')[0]
+        ctx['display_name'] = user.first_name or user.username or 'ciclista'
         return ctx

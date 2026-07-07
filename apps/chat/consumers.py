@@ -2,21 +2,32 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 
-from .models import Message
+from .models import ChatRoom, Message
 
 HISTORY_LIMIT = 100
 PAGE_SIZE = 50
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
-    ROOM_GROUP = 'chat_general'
 
     async def connect(self):
         if not self.scope['user'].is_authenticated:
             await self.close()
             return
 
-        await self.channel_layer.group_add(self.ROOM_GROUP, self.channel_name)
+        # Coherente con ApprovedUserMixin de las vistas HTTP: solo usuarios aprobados.
+        if not await self.is_approved():
+            await self.close()
+            return
+
+        self.slug = self.scope['url_route']['kwargs']['slug']
+        self.room = await self.get_room(self.slug)
+        if self.room is None:
+            await self.close()
+            return
+
+        self.group_name = f'chat_{self.slug}'
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
         history, has_more = await self.get_history()
@@ -24,10 +35,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'type': 'history',
             'messages': history,
             'has_more': has_more,
+            'archived': self.room.is_archived,
         }))
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(self.ROOM_GROUP, self.channel_name)
+        if getattr(self, 'group_name', None):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive(self, text_data):
         try:
@@ -51,24 +64,51 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not content:
             return
 
+        # Las salas archivadas (evento cancelado/borrado) son de solo lectura.
+        if await self.is_room_archived():
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'detail': 'Esta sala está archivada (solo lectura).',
+            }))
+            return
+
         message = await self.save_message(content)
         await self.channel_layer.group_send(
-            self.ROOM_GROUP,
+            self.group_name,
             {'type': 'chat_message', 'message': message},
         )
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({'type': 'message', 'message': event['message']}))
 
+    async def chat_delete(self, event):
+        await self.send(text_data=json.dumps({'type': 'deleted', 'id': event['id']}))
+
+    @database_sync_to_async
+    def is_approved(self):
+        user = self.scope['user']
+        return hasattr(user, 'profile') and user.profile.status == 'approved'
+
+    @database_sync_to_async
+    def get_room(self, slug):
+        return ChatRoom.objects.filter(slug=slug).first()
+
+    @database_sync_to_async
+    def is_room_archived(self):
+        # Se re-consulta para reflejar un archivado ocurrido tras la conexión.
+        return ChatRoom.objects.filter(pk=self.room.pk, is_archived=True).exists()
+
     @database_sync_to_async
     def save_message(self, content):
-        msg = Message.objects.create(user=self.scope['user'], content=content)
+        msg = Message.objects.create(
+            user=self.scope['user'], content=content, room=self.room
+        )
         return self._serialize(msg)
 
     @database_sync_to_async
     def get_history(self):
         qs = list(
-            Message.objects.filter(is_deleted=False)
+            Message.objects.filter(room=self.room, is_deleted=False)
             .select_related('user')
             .order_by('-created_at')[:HISTORY_LIMIT + 1]
         )
@@ -80,7 +120,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_older_messages(self, before_id):
         qs = list(
-            Message.objects.filter(is_deleted=False, pk__lt=before_id)
+            Message.objects.filter(room=self.room, is_deleted=False, pk__lt=before_id)
             .select_related('user')
             .order_by('-created_at')[:PAGE_SIZE + 1]
         )
@@ -92,7 +132,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def _serialize(self, msg):
         return {
             'id': msg.pk,
-            'user': msg.user.get_full_name() or msg.user.email,
+            # Identificador público = username (nunca el email).
+            'user': msg.user.username or 'Miembro',
             'content': msg.content,
             'timestamp': msg.created_at.strftime('%d/%m/%Y %H:%M'),
         }

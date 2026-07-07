@@ -1,0 +1,122 @@
+{% comment %}
+Mapa Leaflet + perfil de elevación reutilizable. Requiere en la página:
+  - `route`: instancia de routes.Route (o event.associated_route)
+  - Leaflet CSS+JS y Chart.js cargados en el bloque extra_head.
+{% endcomment %}
+<div style="border-radius:var(--radius-xl);border:1px solid var(--border);overflow:hidden;background:var(--surface);height:clamp(240px,42vw,380px);position:relative;isolation:isolate;margin-bottom:18px;">
+  <div id="route-map" style="width:100%;height:100%;"></div>
+  {% if route.gpx_file %}
+  <a href="{{ route.gpx_file.url }}" download
+     style="position:absolute;bottom:14px;right:14px;z-index:1000;background:var(--accent);color:var(--ac-text);border-radius:10px;padding:8px 14px;font-family:var(--font-body);font-weight:700;font-size:12px;text-decoration:none;">
+    ↓ Descargar GPX
+  </a>
+  {% endif %}
+</div>
+
+{# Datos GPX serializados de forma segura (evita romper el JS con caracteres inesperados). #}
+{{ route.track_geojson|json_script:"route-track-data" }}
+{{ route.elevation_profile|json_script:"route-elev-data" }}
+
+{% if route.elevation_profile %}
+<div class="card" style="margin-bottom:18px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <span style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);">Perfil de elevación</span>
+    <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">extraído del GPX</span>
+  </div>
+  <canvas id="route-elevation-chart" style="height:120px;max-height:120px;"></canvas>
+</div>
+{% endif %}
+
+<script>
+(function () {
+  // track_geojson es una lista de pares [lat, lon]; elevation_profile son objetos {d: km, e: m}.
+  function readJSON(id) {
+    var el = document.getElementById(id);
+    try { return el ? JSON.parse(el.textContent) : null; } catch (e) { return null; }
+  }
+  var track = readJSON('route-track-data');
+  var mapEl = document.getElementById('route-map');
+  if (mapEl && window.L) {
+    var map = L.map(mapEl);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '© OpenStreetMap'
+    }).addTo(map);
+    if (track && track.length > 1) {
+      var accent = '#f2a93c';
+      try { accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || accent; } catch (e) {}
+      var polyline = L.polyline(track, { color: accent, weight: 3, opacity: .9 }).addTo(map);
+      map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+    } else {
+      map.setView([40.4, -3.7], 6);
+    }
+  }
+
+  var elev = readJSON('route-elev-data');
+  var chartEl = document.getElementById('route-elevation-chart');
+  if (elev && elev.length && chartEl && window.Chart) {
+    var labels = elev.map(function (p) { return (p.d != null) ? parseFloat(p.d).toFixed(1) : ''; });
+    var values = elev.map(function (p) { return p.e || 0; });
+    var step = Math.max(1, Math.ceil(labels.length / 4));
+    var shownLabels = labels.map(function (l, i) {
+      return (i === 0 || i % step === 0 || i === labels.length - 1) ? l + ' km' : '';
+    });
+    var accent = '#f2a93c', dim = '#a59885';
+    try {
+      var cs = getComputedStyle(document.documentElement);
+      accent = cs.getPropertyValue('--accent').trim() || accent;
+      dim = cs.getPropertyValue('--dim').trim() || dim;
+    } catch (e) {}
+
+    // Convierte un color hex (#rgb o #rrggbb) a rgba con alfa; si no es hex, usa el acento por defecto.
+    function toRgba(hex, a) {
+      var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if (!m) {
+        var s = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(hex);
+        if (s) m = [null, s[1] + s[1], s[2] + s[2], s[3] + s[3]];
+      }
+      if (!m) return 'rgba(242,169,60,' + a + ')';
+      return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')';
+    }
+
+    // Relleno degradado bajo la línea de elevación.
+    var fill = toRgba(accent, 0.18);
+    try {
+      var g = chartEl.getContext('2d').createLinearGradient(0, 0, 0, 140);
+      g.addColorStop(0, toRgba(accent, 0.35));
+      g.addColorStop(1, toRgba(accent, 0.02));
+      fill = g;
+    } catch (e) {}
+
+    new Chart(chartEl, {
+      type: 'line',
+      data: { labels: shownLabels, datasets: [{
+        data: values,
+        borderColor: accent,
+        borderWidth: 2,
+        fill: true,
+        backgroundColor: fill,
+        tension: 0.35,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: accent,
+        pointHoverBorderColor: accent,
+      }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: {
+            label: function (c) { return c.raw + ' m'; },
+            title: function (c) { return labels[c[0].dataIndex] + ' km'; }
+          } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: dim, font: { family: 'IBM Plex Mono', size: 11 }, maxRotation: 0 } },
+          y: { grid: { color: 'rgba(150,130,100,.1)' }, ticks: { color: dim, font: { family: 'IBM Plex Mono', size: 11 } } }
+        }
+      }
+    });
+  }
+})();
+</script>

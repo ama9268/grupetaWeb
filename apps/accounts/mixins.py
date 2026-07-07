@@ -16,12 +16,18 @@ class RoleRequiredMixin(ApprovedUserMixin):
     required_roles = []
 
     def dispatch(self, request, *args, **kwargs):
-        result = super().dispatch(request, *args, **kwargs)
-        if hasattr(result, 'status_code') and result.status_code in (302, 403):
-            return result
-        if request.user.profile.role not in self.required_roles:
+        # Comprobar el rol ANTES de ejecutar la vista, para no aplicar efectos
+        # secundarios (crear/editar) a usuarios sin permiso. Solo se comprueba
+        # cuando el usuario está autenticado y aprobado; el resto de casos
+        # (login/aprobación) los resuelve ApprovedUserMixin en super().dispatch.
+        if (
+            request.user.is_authenticated
+            and hasattr(request.user, 'profile')
+            and request.user.profile.status == 'approved'
+            and request.user.profile.role not in self.required_roles
+        ):
             raise PermissionDenied
-        return result
+        return super().dispatch(request, *args, **kwargs)
 
 
 class ModeratorRequiredMixin(RoleRequiredMixin):

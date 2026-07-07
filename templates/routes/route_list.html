@@ -47,10 +47,10 @@
       {# Pie #}
       <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:11px;border-top:1px solid var(--border);">
         <div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0;">
-          {{ route.author.first_name|slice:":1"|upper|default:route.author.email|slice:":1"|upper }}
+          {{ route.author.username|slice:":1"|upper|default:'M' }}
         </div>
         <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          {{ route.author.get_full_name|default:route.author.email }}
+          {{ route.author.username|default:"Miembro" }}
         </span>
         <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim);flex-shrink:0;">{{ route.created_at|date:"d/m/Y" }}</span>
       </div>

@@ -1,7 +1,22 @@
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 
-from .models import EventRSVP
+from .models import Event, EventRSVP
+
+
+@receiver(post_save, sender=Event)
+def create_event_chat_room(sender, instance, created, **kwargs):
+    """Al crear un evento se crea automáticamente su subsala de chat (categoría 'eventos')."""
+    if not created or instance.chat_room_id is not None:
+        return
+    from apps.chat.models import ChatRoom
+    room = ChatRoom.objects.create(
+        name=instance.title,
+        slug=f'evento-{instance.pk}',
+        category=ChatRoom.Category.EVENTOS,
+    )
+    instance.chat_room = room
+    instance.save(update_fields=['chat_room'])
 
 
 @receiver(pre_save, sender=EventRSVP)
@@ -19,11 +34,12 @@ def capture_previous_rsvp(sender, instance, **kwargs):
 def update_events_attended(sender, instance, created, **kwargs):
     previous = getattr(instance, '_previous_response', None)
     current = instance.response
-    profile = instance.user.profile
+    going = EventRSVP.Response.SI
+    profile = instance.member.profile
 
-    if current == 'attending' and previous != 'attending':
+    if current == going and previous != going:
         profile.total_events_attended += 1
         profile.save(update_fields=['total_events_attended'])
-    elif current == 'not_attending' and previous == 'attending':
+    elif current != going and previous == going:
         profile.total_events_attended = max(0, profile.total_events_attended - 1)
         profile.save(update_fields=['total_events_attended'])

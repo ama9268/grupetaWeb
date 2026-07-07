@@ -1,0 +1,41 @@
+{% for event in events %}
+<a href="{% url 'events:detail' event.pk %}"
+   style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);text-decoration:none;{% if event.state == 'cancelado' or event.state == 'superado' %}opacity:.72;{% endif %}">
+
+  {# Miniatura / badge de fecha #}
+  {% if event.image_url %}
+  <img src="{{ event.image_url }}" alt="{{ event.title }}"
+       style="width:64px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0;border:1px solid var(--border);">
+  {% else %}
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:13px;padding:10px 0;text-align:center;width:64px;flex-shrink:0;">
+    <div style="font-family:var(--font-mono);font-weight:700;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;">{{ event.start_at|date:"D" }}</div>
+    <div style="font-family:var(--font-title);font-weight:800;font-size:24px;line-height:1.1;color:var(--text);">{{ event.start_at|date:"j" }}</div>
+    <div style="font-family:var(--font-mono);font-weight:700;font-size:10px;color:var(--dim);text-transform:uppercase;">{{ event.start_at|date:"M" }}</div>
+  </div>
+  {% endif %}
+
+  {# Info #}
+  <div style="flex:1;min-width:160px;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-family:var(--font-title);font-weight:800;font-size:17px;color:var(--text);letter-spacing:-.2px;">{{ event.title }}</span>
+      {% include 'events/partials/state_badge.html' with state=event.state label=event.get_state_display %}
+    </div>
+    <div style="font-family:var(--font-body);font-size:13px;color:var(--dim);margin-top:4px;">
+      {{ event.get_event_type_display }} · {{ event.start_at|date:"d/m/Y H:i" }}
+      {% if event.location %} · {{ event.location }}{% endif %}
+      {% if event.associated_route %} · {{ event.associated_route.distance_km }} km{% endif %}
+    </div>
+  </div>
+
+  {# Confirmados #}
+  {% with count=event.attending_count %}
+  {% if count %}
+  <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);flex-shrink:0;">{{ count }} van</span>
+  {% endif %}
+  {% endwith %}
+</a>
+{% empty %}
+<div style="text-align:center;padding:64px 20px;">
+  <p style="font-family:var(--font-body);font-size:15px;color:var(--dim);">No hay eventos que coincidan con este filtro.</p>
+</div>
+{% endfor %}

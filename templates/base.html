@@ -48,6 +48,10 @@
          class="nav-item{% if ns == 'chat' %} active{% endif %}">Chat</a>
       <a href="{% url 'members:list' %}"
          class="nav-item{% if ns == 'members' %} active{% endif %}">Miembros</a>
+      {% if user.profile.is_moderator %}
+      <a href="{% url 'accounts:manage_users' %}"
+         class="nav-item{% if ns == 'accounts' %} active{% endif %}">Gestión</a>
+      {% endif %}
     </nav>
     {% endwith %}
 
@@ -60,15 +64,20 @@
         <span class="dot-online"></span>
         <span id="theme-label">...</span>
       </button>
-      <a href="{% url 'members:detail' request.user.pk %}"
+      <a href="{% url 'members:detail' request.user.profile.pk %}"
          class="avatar-topbar"
          aria-label="Mi perfil">
         {% if user.profile.photo %}
-          <img src="{{ user.profile.photo.url }}" alt="{{ user.get_full_name|default:user.email }}">
+          <img src="{{ user.profile.photo.url }}" alt="{{ user.username|default:'Miembro' }}">
         {% else %}
-          {{ user.first_name|slice:":1"|upper|default:user.email|slice:":1"|upper }}
+          {{ user.username|slice:":1"|upper|default:'M' }}
         {% endif %}
       </a>
+      <form method="post" action="{% url 'account_logout' %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="nav-item" style="background:none;border:none;cursor:pointer;"
+                aria-label="Cerrar sesión">Salir</button>
+      </form>
     </div>
 
   </div>

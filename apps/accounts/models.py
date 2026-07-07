@@ -34,7 +34,9 @@ class UserProfile(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.user.email} ({self.get_role_display()} / {self.get_status_display()})'
+        # Identificador público = username (el email es dato privado).
+        identifier = self.user.username or self.user.email
+        return f'{identifier} ({self.get_role_display()} / {self.get_status_display()})'
 
     @property
     def is_approved(self):

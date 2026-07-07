@@ -1,8 +1,19 @@
 import filetype
 from django import forms
+from django.conf import settings
 from .cloudinary_utils import ALLOWED_IMAGE_TYPES, ALLOWED_VIDEO_TYPES
 
 MAGIC_BYTES_LENGTH = 261  # filetype only needs the first ~261 bytes
+
+# Límites de tamaño por defecto (configurables desde settings).
+DEFAULT_MAX_IMAGE_UPLOAD_SIZE = 10 * 1024 * 1024   # 10 MB
+DEFAULT_MAX_VIDEO_UPLOAD_SIZE = 100 * 1024 * 1024  # 100 MB
+
+
+def max_upload_size(media_type):
+    if media_type == 'image':
+        return getattr(settings, 'MAX_IMAGE_UPLOAD_SIZE', DEFAULT_MAX_IMAGE_UPLOAD_SIZE)
+    return getattr(settings, 'MAX_VIDEO_UPLOAD_SIZE', DEFAULT_MAX_VIDEO_UPLOAD_SIZE)
 
 
 class MediaUploadForm(forms.Form):
@@ -21,6 +32,14 @@ class MediaUploadForm(forms.Form):
 
         if not (file and media_type):
             return cleaned
+
+        # Límite de tamaño (antes de leer/enviar nada a Cloudinary).
+        limit = max_upload_size(media_type)
+        if file.size > limit:
+            mb = limit // (1024 * 1024)
+            raise forms.ValidationError(
+                f'El archivo supera el tamaño máximo permitido ({mb} MB).'
+            )
 
         header = file.read(MAGIC_BYTES_LENGTH)
         file.seek(0)

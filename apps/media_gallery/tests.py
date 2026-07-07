@@ -25,6 +25,20 @@ def test_invalid_mime_rejected_before_upload(member_client):
 
 
 @pytest.mark.django_db
+def test_oversized_file_rejected_before_upload(member_client, settings):
+    """Un archivo que supera el límite de tamaño no llega a Cloudinary."""
+    settings.MAX_IMAGE_UPLOAD_SIZE = 100  # bytes; PNG_MAGIC son 261
+    png_file = SimpleUploadedFile('foto.png', PNG_MAGIC, content_type='image/png')
+    with patch('apps.media_gallery.views.upload_media_item') as mock_upload:
+        response = member_client.post(
+            reverse('media_gallery:upload'),
+            {'media_type': 'image', 'file': png_file},
+        )
+        mock_upload.assert_not_called()
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
 def test_valid_png_passes_mime_check(member_client):
     """A file with valid PNG magic bytes passes MIME validation
     (service call is mocked to avoid real Cloudinary upload)."""

@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from .sanitize import sanitize_html
+
 
 class Post(models.Model):
     title = models.CharField(max_length=200)
@@ -13,6 +15,11 @@ class Post(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [models.Index(fields=['-created_at'])]
+
+    def save(self, *args, **kwargs):
+        # El contenido se muestra con |safe: sanear el HTML antes de persistirlo (anti-XSS).
+        self.content = sanitize_html(self.content)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title

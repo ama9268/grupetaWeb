@@ -23,11 +23,11 @@
         <div class="tarjeta-registro-header">
           {# Avatar con inicial #}
           <div class="avatar av-40">
-            {{ pending_user.email|slice:":1"|upper }}
+            {{ pending_user.username|slice:":1"|upper|default:'M' }}
           </div>
           <div class="tarjeta-registro-info">
             <div class="tarjeta-registro-name">
-              {{ pending_user.get_full_name|default:pending_user.email }}
+              {{ pending_user.username|default:"Miembro" }}
             </div>
             <div class="tarjeta-registro-email">{{ pending_user.email }}</div>
           </div>
@@ -47,7 +47,7 @@
                     hx-post="{% url 'accounts:approve_user' pending_user.pk %}"
                     hx-target="#registro-{{ pending_user.pk }}"
                     hx-swap="outerHTML"
-                    hx-confirm="¿Aprobar a {{ pending_user.email }}?">
+                    hx-confirm="¿Aprobar a {{ pending_user.username }}?">
               Aprobar
             </button>
           </form>
@@ -61,7 +61,7 @@
                     hx-post="{% url 'accounts:reject_user' pending_user.pk %}"
                     hx-target="#registro-{{ pending_user.pk }}"
                     hx-swap="outerHTML"
-                    hx-confirm="¿Rechazar a {{ pending_user.email }}?">
+                    hx-confirm="¿Rechazar a {{ pending_user.username }}?">
               Rechazar
             </button>
           </form>
@@ -92,28 +92,31 @@
         {# Avatar #}
         <div class="avatar av-32">
           {% if member.profile.photo %}
-            <img src="{{ member.profile.photo.url }}" alt="{{ member.get_full_name }}">
+            <img src="{{ member.profile.photo.url }}" alt="{{ member.username|default:'Miembro' }}">
           {% else %}
-            {{ member.email|slice:":1"|upper }}
+            {{ member.username|slice:":1"|upper|default:'M' }}
           {% endif %}
         </div>
 
         {# Info #}
         <div class="roles-row-info">
           <div class="roles-row-name">
-            {{ member.get_full_name|default:member.email }}
+            {{ member.username|default:"Miembro" }}
           </div>
           <div class="roles-row-email">{{ member.email }}</div>
         </div>
 
-        {# Selector de rol #}
+        {# Selector de rol. Solo un admin puede otorgar/modificar el rol 'admin'. #}
+        {% if not request.user.profile.is_admin and member.profile.role == 'admin' %}
+        <span style="min-width:120px;text-align:center;display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);font-family:var(--font-body);font-weight:700;font-size:13px;color:var(--dim);">Admin</span>
+        {% else %}
         <select class="select"
                 style="width:auto;min-width:120px;"
                 name="role"
                 hx-post="{% url 'accounts:change_role' member.pk %}"
                 hx-trigger="change"
                 hx-swap="none"
-                aria-label="Rol de {{ member.email }}">
+                aria-label="Rol de {{ member.username }}">
           <option value="member"
                   {% if member.profile.role == 'member' %}selected{% endif %}>
             Miembro
@@ -122,11 +125,14 @@
                   {% if member.profile.role == 'moderator' %}selected{% endif %}>
             Moderador
           </option>
+          {% if request.user.profile.is_admin %}
           <option value="admin"
                   {% if member.profile.role == 'admin' %}selected{% endif %}>
             Admin
           </option>
+          {% endif %}
         </select>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

@@ -36,6 +36,28 @@ def test_gpx_upload_extracts_stats(approved_member, member_client):
 
 
 @pytest.mark.django_db
+def test_route_detail_serializes_track_as_json_script(approved_member, member_client):
+    route = Route.objects.create(
+        title='Ruta con trazado', author=approved_member,
+        track_geojson=[[40.4168, -3.7038], [40.42, -3.70]],
+        elevation_profile=[{'d': 0.0, 'e': 650}, {'d': 0.5, 'e': 680}],
+    )
+    response = member_client.get(reverse('routes:detail', args=[route.pk]))
+    assert response.status_code == 200
+    # Los datos van en islas <script type="application/json"> (json_script), no inline con |safe.
+    assert b'id="route-track-data"' in response.content
+    assert b'application/json' in response.content
+    assert b'40.4168' in response.content
+
+
+@pytest.mark.django_db
+def test_route_detail_handles_missing_track(approved_member, member_client):
+    route = Route.objects.create(title='Ruta sin trazado', author=approved_member)
+    response = member_client.get(reverse('routes:detail', args=[route.pk]))
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
 def test_gpx_upload_rejects_invalid_file(member_client):
     fake_gpx = SimpleUploadedFile('trampa.gpx', b'esto no es un gpx', content_type='application/gpx+xml')
     response = member_client.post(reverse('routes:create'), {
