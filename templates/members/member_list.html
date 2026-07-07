@@ -40,16 +40,16 @@
         {{ forloop.counter }}
       </div>
       {% if member.photo %}
-      <img src="{{ member.photo.url }}" alt="{{ member.user.get_full_name }}"
+      <img src="{{ member.photo.url }}" alt="{{ member.user.username|default:'Miembro' }}"
            style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0;">
       {% else %}
       <div class="avatar" style="width:46px;height:46px;font-size:17px;flex-shrink:0;">
-        {{ member.user.first_name|slice:":1"|upper|default:member.user.email|slice:":1"|upper }}
+        {{ member.user.username|slice:":1"|upper|default:'M' }}
       </div>
       {% endif %}
       <div style="flex:1;min-width:0;">
         <div style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          {{ member.user.get_full_name|default:member.user.email }}
+          {{ member.user.username|default:"Miembro" }}
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
           <span class="role-badge {% if member.role != 'member' %}admin{% endif %}">
@@ -80,17 +80,17 @@
        onmouseenter="this.style.boxShadow='var(--shadow-sm)'"
        onmouseleave="this.style.boxShadow='none'">
       {% if member.photo %}
-      <img src="{{ member.photo.url }}" alt="{{ member.user.get_full_name }}"
+      <img src="{{ member.photo.url }}" alt="{{ member.user.username|default:'Miembro' }}"
            style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0;">
       {% else %}
       <div class="avatar" style="width:46px;height:46px;font-size:17px;flex-shrink:0;">
-        {{ member.user.first_name|slice:":1"|upper|default:member.user.email|slice:":1"|upper }}
+        {{ member.user.username|slice:":1"|upper|default:'M' }}
       </div>
       {% endif %}
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
           <span style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            {{ member.user.get_full_name|default:member.user.email }}
+            {{ member.user.username|default:"Miembro" }}
           </span>
           <span class="role-badge {% if member.role != 'member' %}admin{% endif %}">{{ member.get_role_display }}</span>
         </div>

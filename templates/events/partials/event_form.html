@@ -1,0 +1,80 @@
+{# Formulario compartido de crear/editar evento. Espera: form, heading, submit_label #}
+<div style="max-width:520px;margin:0 auto;">
+  <a href="{% url 'events:list' %}"
+     style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
+    ← Eventos
+  </a>
+  <div class="card" style="border-radius:var(--radius-xl);padding:24px;">
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);margin-bottom:20px;">{{ heading }}</h1>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <p class="form-error" style="margin-bottom:12px;">{{ form.non_field_errors.0 }}</p>
+      {% endif %}
+
+      {# Campos estándar del evento (se excluye la sección de ruta, que es a medida). #}
+      {% for field in form %}
+      {% if field.name != 'route_mode' and field.name != 'associated_route' and field.name != 'gpx_file' %}
+      <div class="form-group">
+        <label class="form-label" for="{{ field.auto_id }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+        <p style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-top:4px;">{{ field.help_text }}</p>
+        {% endif %}
+        {% if field.errors %}
+        <p class="form-error">{{ field.errors.0 }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% endfor %}
+
+      {# Sección de ruta: sin ruta / elegir existente / subir GPX nuevo. #}
+      {% with mode=form.route_mode.value|default:'none' %}
+      <div class="form-group route-picker">
+        <span class="form-label">{{ form.route_mode.label }}</span>
+        <div class="route-modes">
+          <label class="route-mode">
+            <input type="radio" name="route_mode" value="none" {% if mode == 'none' %}checked{% endif %}>
+            <span>Sin ruta</span>
+          </label>
+          <label class="route-mode">
+            <input type="radio" name="route_mode" value="existing" {% if mode == 'existing' %}checked{% endif %}>
+            <span>Elegir existente</span>
+          </label>
+          <label class="route-mode">
+            <input type="radio" name="route_mode" value="new" {% if mode == 'new' %}checked{% endif %}>
+            <span>Subir GPX nuevo</span>
+          </label>
+        </div>
+
+        <div class="route-panel route-panel--existing">
+          {{ form.associated_route }}
+          {% if form.associated_route.errors %}
+          <p class="form-error">{{ form.associated_route.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="route-panel route-panel--new">
+          {{ form.gpx_file }}
+          <p style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-top:6px;">
+            Se creará como ruta en el módulo Rutas, con el título y la descripción del evento.
+          </p>
+          {% if form.gpx_file.errors %}
+          <p class="form-error">{{ form.gpx_file.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        {% if form.route_mode.errors %}
+        <p class="form-error">{{ form.route_mode.errors.0 }}</p>
+        {% endif %}
+      </div>
+      {% endwith %}
+
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button type="submit" class="btn-primary" style="flex:1;">{{ submit_label }}</button>
+        <a href="{% url 'events:list' %}" class="btn-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>

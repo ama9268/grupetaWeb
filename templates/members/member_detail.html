@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}{{ member_profile.user.get_full_name|default:member_profile.user.email }}{% endblock %}
+{% block title %}{{ member_profile.user.username|default:"Miembro" }}{% endblock %}
 
 {% block content %}
 
@@ -18,18 +18,22 @@
   <div style="position:absolute;bottom:-40px;left:22px;">
     {% if member_profile.photo %}
     <img src="{{ member_profile.photo.url }}"
-         alt="{{ member_profile.user.get_full_name }}"
+         alt="{{ member_profile.user.username|default:'Miembro' }}"
          style="width:78px;height:78px;border-radius:50%;object-fit:cover;border:3px solid var(--surface);box-shadow:var(--shadow-sm);">
     {% else %}
     <div class="avatar" style="width:78px;height:78px;font-size:28px;border:3px solid var(--surface);box-shadow:var(--shadow-sm);">
-      {{ member_profile.user.first_name|slice:":1"|upper|default:member_profile.user.email|slice:":1"|upper }}
+      {{ member_profile.user.username|slice:":1"|upper|default:'M' }}
     </div>
     {% endif %}
   </div>
-  {# Botón editar (solo el propio usuario) #}
+  {# Botón editar: el propio usuario, o admin/moderador sobre cualquier perfil #}
   {% if member_profile.user == request.user %}
   <div style="position:absolute;bottom:-40px;right:0;">
     <a href="{% url 'members:profile_edit' %}" class="btn-secondary" style="padding:8px 14px;font-size:13px;">Editar perfil</a>
+  </div>
+  {% elif request.user.profile.is_moderator %}
+  <div style="position:absolute;bottom:-40px;right:0;">
+    <a href="{% url 'members:profile_edit_member' member_profile.pk %}" class="btn-secondary" style="padding:8px 14px;font-size:13px;">Editar perfil</a>
   </div>
   {% endif %}
 </div>
@@ -38,7 +42,7 @@
 <div style="margin-bottom:22px;">
   <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;flex-wrap:wrap;">
     <h1 style="font-family:var(--font-title);font-weight:800;font-size:26px;letter-spacing:-.4px;color:var(--text);">
-      {{ member_profile.user.get_full_name|default:member_profile.user.email }}
+      {{ member_profile.user.username|default:"Miembro" }}
     </h1>
     <span class="role-badge {% if member_profile.role != 'member' %}admin{% endif %}">{{ member_profile.get_role_display }}</span>
   </div>

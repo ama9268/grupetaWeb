@@ -19,10 +19,10 @@
       <a href="{% url 'members:detail' post.author.profile.pk %}"
          style="display:flex;align-items:center;gap:8px;text-decoration:none;">
         <div class="avatar" style="width:34px;height:34px;font-size:12px;">
-          {{ post.author.first_name|slice:":1"|upper|default:post.author.email|slice:":1"|upper }}
+          {{ post.author.username|slice:":1"|upper|default:'M' }}
         </div>
         <span style="font-family:var(--font-body);font-weight:700;font-size:14px;color:var(--text);">
-          {{ post.author.get_full_name|default:post.author.email }}
+          {{ post.author.username|default:"Miembro" }}
         </span>
       </a>
       <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);">
@@ -69,7 +69,7 @@
           style="display:flex;align-items:flex-start;gap:10px;margin-bottom:22px;">
       {% csrf_token %}
       <div class="avatar" style="width:34px;height:34px;font-size:12px;flex-shrink:0;margin-top:2px;">
-        {{ request.user.first_name|slice:":1"|upper|default:request.user.email|slice:":1"|upper }}
+        {{ request.user.username|slice:":1"|upper|default:'M' }}
       </div>
       <div style="flex:1;">
         <textarea name="content"
@@ -88,12 +88,12 @@
       {% for comment in comments %}
       <div style="display:flex;gap:10px;">
         <div class="avatar" style="width:34px;height:34px;font-size:12px;flex-shrink:0;margin-top:2px;">
-          {{ comment.author.first_name|slice:":1"|upper|default:comment.author.email|slice:":1"|upper }}
+          {{ comment.author.username|slice:":1"|upper|default:'M' }}
         </div>
         <div style="flex:1;">
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:5px;">
             <span style="font-family:var(--font-body);font-weight:700;font-size:13px;color:var(--text);">
-              {{ comment.author.get_full_name|default:comment.author.email }}
+              {{ comment.author.username|default:"Miembro" }}
             </span>
             <span style="font-family:var(--font-body);font-size:11px;color:var(--dim);">{{ comment.created_at|date:"d/m/Y H:i" }}</span>
             {% if comment.author == request.user or request.user.profile.is_moderator %}

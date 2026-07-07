@@ -1,0 +1,8 @@
+{# Enlace a una sala en el sidebar. Espera: r (ChatRoom), active (slug activo). #}
+<a href="{% url 'chat:room_detail' r.slug %}"
+   style="display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:12px;text-decoration:none;
+   {% if r.slug == active %}background:var(--accent-soft);{% else %}background:transparent;{% endif %}">
+  <span style="width:28px;height:28px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-title);font-weight:800;font-size:12px;color:var(--text);flex-shrink:0;">{{ r.name|slice:":1"|upper }}</span>
+  <span style="font-family:var(--font-body);font-weight:600;font-size:13px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;{% if r.slug == active %}color:var(--accent);{% else %}color:var(--text);{% endif %}">{{ r.name }}</span>
+  {% if r.is_archived %}<span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);flex-shrink:0;">archivada</span>{% endif %}
+</a>

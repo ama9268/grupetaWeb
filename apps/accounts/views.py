@@ -30,7 +30,7 @@ class ManageUsersView(ModeratorRequiredMixin, ListView):
             User.objects
             .filter(profile__status='approved', is_active=True)
             .select_related('profile')
-            .order_by('email')
+            .order_by('username')
         )
         return ctx
 
@@ -56,7 +56,7 @@ def approve_user(request, user_id):
 
     if request.headers.get('HX-Request'):
         return HttpResponse('')
-    messages.success(request, f'Usuario {user.email} aprobado correctamente.')
+    messages.success(request, f'Usuario {user.username} aprobado correctamente.')
     return redirect('accounts:manage_users')
 
 
@@ -71,7 +71,7 @@ def reject_user(request, user_id):
 
     if request.headers.get('HX-Request'):
         return HttpResponse('')
-    messages.warning(request, f'Usuario {user.email} rechazado.')
+    messages.warning(request, f'Usuario {user.username} rechazado.')
     return redirect('accounts:manage_users')
 
 
@@ -82,11 +82,39 @@ def change_role(request, user_id):
 
     user = get_object_or_404(User, pk=user_id, is_active=True)
     new_role = request.POST.get('role', '')
-    if new_role in ('member', 'moderator', 'admin'):
-        user.profile.role = new_role
-        user.profile.save()
+
+    # Solo un admin puede otorgar el rol 'admin' o modificar el rol de quien ya es admin.
+    # Un moderador solo gestiona roles 'member'/'moderator' (según CLAUDE.md).
+    acting_is_admin = request.user.profile.role == 'admin'
+    if not acting_is_admin and (new_role == 'admin' or user.profile.role == 'admin'):
+        raise PermissionDenied
+
+    if new_role not in ('member', 'moderator', 'admin'):
+        return redirect('accounts:manage_users')
+
+    # Guarda del último admin: no permitir degradar al único admin activo, para
+    # evitar dejar la grupeta sin ningún administrador.
+    degrading_admin = user.profile.role == 'admin' and new_role != 'admin'
+    if degrading_admin:
+        active_admins = UserProfile.objects.filter(
+            role='admin', user__is_active=True,
+        ).count()
+        if active_admins <= 1:
+            messages.error(
+                request,
+                'No puedes quitar el rol de administrador al último admin activo.',
+            )
+            if request.headers.get('HX-Request'):
+                # Recargar para revertir el <select> y mostrar el error.
+                resp = HttpResponse(status=204)
+                resp['HX-Refresh'] = 'true'
+                return resp
+            return redirect('accounts:manage_users')
+
+    user.profile.role = new_role
+    user.profile.save()
 
     if request.headers.get('HX-Request'):
         return HttpResponse('')
-    messages.success(request, f'Rol de {user.email} actualizado.')
+    messages.success(request, f'Rol de {user.username} actualizado.')
     return redirect('accounts:manage_users')

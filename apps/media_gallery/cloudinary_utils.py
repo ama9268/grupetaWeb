@@ -20,3 +20,14 @@ def upload_video(file_obj):
         folder='grupetaweb/videos/',
     )
     return result['public_id'], result['secure_url']
+
+
+def delete_asset(public_id, resource_type='image'):
+    """Elimina un asset de Cloudinary (best-effort). No lanza si falla el borrado."""
+    if not public_id:
+        return
+    try:
+        cloudinary.uploader.destroy(public_id, resource_type=resource_type, invalidate=True)
+    except Exception:
+        # El borrado de limpieza no debe romper la petición del usuario.
+        pass

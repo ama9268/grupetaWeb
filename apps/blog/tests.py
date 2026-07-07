@@ -30,6 +30,42 @@ def other_member(db):
 
 
 @pytest.mark.django_db
+def test_post_content_is_sanitized_on_save(approved_member):
+    post = Post.objects.create(
+        title='XSS',
+        content='<p>Hola</p><script>alert(1)</script><img src=x onerror="alert(2)">',
+        author=approved_member,
+    )
+    post.refresh_from_db()
+    assert '<script>' not in post.content
+    assert 'onerror' not in post.content
+    assert '<p>Hola</p>' in post.content
+
+
+@pytest.mark.django_db
+def test_post_sanitize_strips_javascript_href(approved_member):
+    post = Post.objects.create(
+        title='Enlace peligroso',
+        content='<a href="javascript:alert(1)">click</a>',
+        author=approved_member,
+    )
+    post.refresh_from_db()
+    assert 'javascript:' not in post.content
+
+
+@pytest.mark.django_db
+def test_post_sanitize_keeps_safe_formatting(approved_member):
+    post = Post.objects.create(
+        title='Formato',
+        content='<h2>Título</h2><p><strong>negrita</strong> y <a href="https://x.com">enlace</a></p>',
+        author=approved_member,
+    )
+    post.refresh_from_db()
+    assert '<strong>negrita</strong>' in post.content
+    assert 'href="https://x.com"' in post.content
+
+
+@pytest.mark.django_db
 def test_like_toggle_creates_then_deletes(member_client, approved_member, post):
     member_client.post(reverse('blog:toggle_like', args=[post.pk]))
     assert Like.objects.filter(post=post, user=approved_member).exists()

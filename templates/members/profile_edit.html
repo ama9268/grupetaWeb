@@ -3,13 +3,20 @@
 
 {% block content %}
 <div style="max-width:560px;margin:0 auto;">
-  <a href="{% url 'members:detail' request.user.profile.pk %}"
+  <a href="{% url 'members:detail' object.profile.pk %}"
      style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
-    ← Mi perfil
+    ← {% if is_self %}Mi perfil{% else %}Volver al perfil{% endif %}
   </a>
 
   <div class="card" style="border-radius:var(--radius-xl);padding:24px;">
-    <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);margin-bottom:20px;">Editar perfil</h1>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+      <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);">
+        {% if is_self %}Editar perfil{% else %}Editar a {{ object.username|default:"Miembro" }}{% endif %}
+      </h1>
+      {# Badges de solo lectura: rol y estado (se gestionan en accounts) #}
+      <span class="role-badge {% if target_profile.role != 'member' %}admin{% endif %}">{{ target_profile.get_role_display }}</span>
+      <span class="role-badge">{{ target_profile.get_status_display }}</span>
+    </div>
 
     {% if messages %}
     <div style="margin-bottom:16px;">
@@ -21,15 +28,52 @@
     </div>
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="form-non-field-errors" role="alert">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+      {% endif %}
+
+      {# Nombre de usuario (identificador público) #}
+      <div class="form-group">
+        <label class="form-label" for="{{ form.username.auto_id }}">{{ form.username.label }}</label>
+        {{ form.username }}
+        {% if form.username.help_text %}
+        <span style="font-family:var(--font-body);font-size:11px;color:var(--dim);display:block;margin-top:5px;">{{ form.username.help_text }}</span>
+        {% endif %}
+        {% if form.username.errors %}<p class="form-error">{{ form.username.errors.0 }}</p>{% endif %}
+      </div>
+
+      {# Nombre y apellidos #}
+      <div class="form-group">
+        <label class="form-label" for="{{ form.first_name.auto_id }}">{{ form.first_name.label }}</label>
+        {{ form.first_name }}
+        {% if form.first_name.errors %}<p class="form-error">{{ form.first_name.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.last_name.auto_id }}">{{ form.last_name.label }}</label>
+        {{ form.last_name }}
+        {% if form.last_name.errors %}<p class="form-error">{{ form.last_name.errors.0 }}</p>{% endif %}
+      </div>
+
+      {# Email (credencial de login) #}
+      <div class="form-group">
+        <label class="form-label" for="{{ form.email.auto_id }}">{{ form.email.label }}</label>
+        {{ form.email }}
+        <span style="font-family:var(--font-body);font-size:11px;color:var(--dim);display:block;margin-top:5px;">Es tu credencial de acceso. Solo tú y la moderación lo veis.</span>
+        {% if form.email.errors %}<p class="form-error">{{ form.email.errors.0 }}</p>{% endif %}
+      </div>
 
       {# Foto de perfil #}
       <div class="form-group">
         <label class="form-label">{{ form.photo.label }}</label>
-        {% if form.instance.photo %}
+        {% if target_profile.photo %}
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-          <img src="{{ form.instance.photo.url }}"
+          <img src="{{ target_profile.photo.url }}"
                alt="Foto actual"
                style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">
           <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);">Foto actual · sube una nueva para reemplazarla</span>
@@ -38,39 +82,37 @@
         <input type="file" name="{{ form.photo.html_name }}" id="{{ form.photo.auto_id }}"
                accept="image/*"
                style="font-family:var(--font-body);font-size:13px;color:var(--text);">
-        {% if form.photo.errors %}
-        <p class="form-error">{{ form.photo.errors.0 }}</p>
-        {% endif %}
+        {% if form.photo.errors %}<p class="form-error">{{ form.photo.errors.0 }}</p>{% endif %}
       </div>
 
       {# Bio #}
       <div class="form-group">
         <label class="form-label" for="{{ form.bio.auto_id }}">{{ form.bio.label }}</label>
-        <textarea class="input" name="{{ form.bio.html_name }}" id="{{ form.bio.auto_id }}"
-                  rows="4"
-                  placeholder="Cuéntanos algo sobre ti..."
-                  style="height:auto;resize:vertical;">{{ form.bio.value|default:"" }}</textarea>
-        {% if form.bio.errors %}
-        <p class="form-error">{{ form.bio.errors.0 }}</p>
-        {% endif %}
+        {{ form.bio }}
+        {% if form.bio.errors %}<p class="form-error">{{ form.bio.errors.0 }}</p>{% endif %}
       </div>
 
       {# Bicis #}
       <div class="form-group">
         <label class="form-label" for="{{ form.bikes.auto_id }}">{{ form.bikes.label }}</label>
-        <textarea class="input" name="{{ form.bikes.html_name }}" id="{{ form.bikes.auto_id }}"
-                  rows="3"
-                  placeholder="Canyon CF SLX 8.0&#10;Orbea Terra H30"
-                  style="height:auto;resize:vertical;">{{ form.bikes.value|default:"" }}</textarea>
+        {{ form.bikes }}
         <span style="font-family:var(--font-body);font-size:11px;color:var(--dim);display:block;margin-top:5px;">Una bicicleta por línea.</span>
-        {% if form.bikes.errors %}
-        <p class="form-error">{{ form.bikes.errors.0 }}</p>
-        {% endif %}
+        {% if form.bikes.errors %}<p class="form-error">{{ form.bikes.errors.0 }}</p>{% endif %}
       </div>
+
+      {# Cambiar contraseña: solo el propio usuario #}
+      {% if is_self %}
+      <div class="form-group">
+        <a href="{% url 'account_change_password' %}"
+           style="font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--accent);text-decoration:none;">
+          Cambiar contraseña →
+        </a>
+      </div>
+      {% endif %}
 
       <div style="display:flex;gap:10px;margin-top:6px;">
         <button type="submit" class="btn-primary" style="flex:1;">Guardar cambios</button>
-        <a href="{% url 'members:detail' request.user.profile.pk %}" class="btn-secondary">Cancelar</a>
+        <a href="{% url 'members:detail' object.profile.pk %}" class="btn-secondary">Cancelar</a>
       </div>
     </form>
   </div>

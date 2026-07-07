@@ -106,7 +106,9 @@ AUTHENTICATION_BACKENDS = [
 
 ACCOUNT_ADAPTER = 'apps.accounts.adapters.AccountAdapter'
 ACCOUNT_LOGIN_METHODS = {'email'}
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+# El login sigue siendo por email; `username` es el identificador público visible.
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
+ACCOUNT_USERNAME_VALIDATORS = 'apps.accounts.validators.username_validators'
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_SIGNUP_REDIRECT_URL = '/accounts/pending/'
 LOGIN_URL = '/accounts/login/'
@@ -127,4 +129,8 @@ CLOUDINARY_STORAGE = {
     'API_KEY': env('CLOUDINARY_API_KEY', default=''),
     'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
 }
+
+# Límites de subida de media (bytes). Ajustables según el plan de Cloudinary.
+MAX_IMAGE_UPLOAD_SIZE = env.int('MAX_IMAGE_UPLOAD_SIZE', default=10 * 1024 * 1024)   # 10 MB
+MAX_VIDEO_UPLOAD_SIZE = env.int('MAX_VIDEO_UPLOAD_SIZE', default=100 * 1024 * 1024)  # 100 MB
 

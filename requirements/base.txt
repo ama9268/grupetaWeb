@@ -14,3 +14,4 @@ whitenoise
 daphne
 pytest-django
 filetype
+nh3

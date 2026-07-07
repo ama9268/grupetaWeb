@@ -69,9 +69,9 @@
       {# Avatares confirmados #}
       <div style="display:flex;align-items:center;gap:6px;margin-top:12px;">
         <div style="display:flex;">
-          {% for rsvp in next_event.rsvps.all|slice:":5" %}
+          {% for rsvp in next_event_attendees %}
           <div class="avatar" style="width:28px;height:28px;font-size:10px;margin-left:-6px;border:2px solid var(--surface);">
-            {{ rsvp.user.first_name|slice:":1"|upper|default:rsvp.user.email|slice:":1"|upper }}
+            {{ rsvp.member.username|slice:":1"|upper|default:'M' }}
           </div>
           {% endfor %}
         </div>
@@ -167,7 +167,7 @@
             {{ forloop.counter }}
           </div>
           <span style="flex:1;font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            {{ member.user.get_full_name|default:member.user.email }}
+            {{ member.user.username|default:"Miembro" }}
           </span>
           <span style="font-family:var(--font-mono);font-weight:600;font-size:13px;color:var(--dim);flex-shrink:0;">
             {{ member.total_km }} km
@@ -191,11 +191,11 @@
         <a href="{% url 'blog:detail' post.pk %}"
            style="display:flex;align-items:center;gap:12px;text-decoration:none;padding:10px 13px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);">
           <div class="avatar" style="width:30px;height:30px;font-size:11px;flex-shrink:0;">
-            {{ post.author.first_name|slice:":1"|upper|default:post.author.email|slice:":1"|upper }}
+            {{ post.author.username|slice:":1"|upper|default:'M' }}
           </div>
           <div style="flex:1;min-width:0;">
             <div style="font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ post.title }}</div>
-            <div style="font-family:var(--font-body);font-size:11px;color:var(--dim);">{{ post.author.get_full_name|default:post.author.email }} · {{ post.created_at|date:"d/m" }}</div>
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--dim);">{{ post.author.username|default:"Miembro" }} · {{ post.created_at|date:"d/m" }}</div>
           </div>
           <span style="font-family:var(--font-body);font-size:11px;color:var(--dim);flex-shrink:0;">♥ {{ post.likes_count }}</span>
         </a>

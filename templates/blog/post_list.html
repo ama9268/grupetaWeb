@@ -39,10 +39,10 @@
     </p>
     <div style="display:flex;align-items:center;gap:9px;">
       <div class="avatar" style="width:26px;height:26px;font-size:10px;">
-        {{ featured.author.first_name|slice:":1"|upper|default:featured.author.email|slice:":1"|upper }}
+        {{ featured.author.username|slice:":1"|upper|default:'M' }}
       </div>
       <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);">
-        {{ featured.author.get_full_name|default:featured.author.email }} · {{ featured.created_at|date:"d/m/Y" }}
+        {{ featured.author.username|default:"Miembro" }} · {{ featured.created_at|date:"d/m/Y" }}
       </span>
       <span style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-left:auto;">♥ {{ featured.likes_count }}</span>
     </div>
@@ -73,7 +73,7 @@
     <div style="flex:1;min-width:0;">
       <div style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.2px;">{{ post.title }}</div>
       <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-top:3px;">
-        {{ post.author.get_full_name|default:post.author.email }} · {{ post.created_at|date:"d/m/Y" }} · ♥ {{ post.likes_count }}
+        {{ post.author.username|default:"Miembro" }} · {{ post.created_at|date:"d/m/Y" }} · ♥ {{ post.likes_count }}
       </div>
     </div>
   </a>

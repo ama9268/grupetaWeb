@@ -673,6 +673,55 @@ body, header, nav, main, aside, footer,
   color: var(--error);
 }
 
+/* Selector de ruta del evento (sin ruta / existente / GPX nuevo) */
+.route-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.route-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  transition: border-color 0.15s ease;
+}
+
+.route-mode:has(input:checked) {
+  border-color: var(--accent);
+}
+
+.route-mode input {
+  accent-color: var(--accent);
+}
+
+.route-panel input[type="file"] {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Mostrar solo el panel del modo seleccionado. */
+.route-panel {
+  display: none;
+}
+
+.route-picker:has(input[value="existing"]:checked) .route-panel--existing,
+.route-picker:has(input[value="new"]:checked) .route-panel--new {
+  display: block;
+}
+
 /* Auth submit button */
 .auth-submit {
   width: 100%;
