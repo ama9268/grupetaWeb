@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}Direcciones de email{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <a href="{% url 'members:profile_edit' %}"
+     style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
+    ← Volver a mi perfil
+  </a>
+
+  <div class="card" style="border-radius:var(--radius-xl);padding:24px;margin-bottom:16px;">
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);margin-bottom:6px;">
+      Direcciones de email
+    </h1>
+    <p style="font-family:var(--font-body);font-size:13px;color:var(--dim);margin-bottom:20px;">
+      Tu email es tu credencial de acceso. Estas son las direcciones asociadas a tu cuenta.
+    </p>
+
+    {% if messages %}
+    <div style="margin-bottom:16px;">
+      {% for msg in messages %}
+      <div class="message-item {{ msg.tags }}" style="margin-bottom:8px;">{{ msg }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if emailaddresses %}
+    <form method="post" action="{% url 'account_email' %}">
+      {% csrf_token %}
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        {% for radio in emailaddress_radios %}
+        {% with emailaddress=radio.emailaddress %}
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg);cursor:pointer;">
+          <input type="radio" name="email" value="{{ emailaddress.email }}"
+                 id="{{ radio.id }}" {% if radio.checked %}checked{% endif %}
+                 style="accent-color:var(--accent);flex-shrink:0;">
+          <span style="flex:1;min-width:0;font-family:var(--font-body);font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            {{ emailaddress.email }}
+          </span>
+          {% if emailaddress.primary %}
+          <span class="role-badge admin">Principal</span>
+          {% endif %}
+          {% if emailaddress.verified %}
+          <span class="chip" style="cursor:default;color:var(--online);border-color:var(--online);">Verificado</span>
+          {% else %}
+          <span class="chip" style="cursor:default;color:var(--accent);border-color:var(--accent);">Sin verificar</span>
+          {% endif %}
+        </label>
+        {% endwith %}
+        {% endfor %}
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <button type="submit" name="action_primary" class="btn-secondary" style="flex:1;min-width:120px;">Hacer principal</button>
+        <button type="submit" name="action_send" class="btn-secondary" style="flex:1;min-width:120px;">Reenviar verificación</button>
+        <button type="submit" name="action_remove" class="btn-danger" style="flex:1;min-width:100px;">Eliminar</button>
+      </div>
+    </form>
+    {% else %}
+    <div class="empty-state">No hay ninguna dirección de email asociada a tu cuenta.</div>
+    {% endif %}
+  </div>
+
+  {% if can_add_email %}
+  <div class="card" style="border-radius:var(--radius-xl);padding:24px;">
+    <h2 style="font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--text);margin-bottom:16px;">
+      Añadir email
+    </h2>
+    <form method="post" action="{% url 'account_email' %}" novalidate>
+      {% csrf_token %}
+      {% if add_email_form.non_field_errors %}
+      <div class="form-non-field-errors" role="alert">
+        {% for error in add_email_form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+      {% endif %}
+      {% for field in add_email_form %}
+      <div class="form-group">
+        <label class="form-label" for="{{ field.auto_id }}">{{ field.label }}</label>
+        <input class="input" type="email" name="{{ field.html_name }}" id="{{ field.auto_id }}"
+               value="{{ field.value|default:'' }}" autocomplete="email"
+               {% if field.field.required %}required{% endif %}>
+        {% for error in field.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+      </div>
+      {% endfor %}
+      <button type="submit" name="action_add" class="btn-primary" style="margin-top:6px;">Añadir email</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load i18n socialaccount %}
+{% block title %}Conexiones de terceros{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  <a href="{% url 'members:profile_edit' %}"
+     style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
+    ← Volver a mi perfil
+  </a>
+
+  <div class="card" style="border-radius:var(--radius-xl);padding:24px;">
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);margin-bottom:6px;">
+      Conexiones de terceros
+    </h1>
+    <p style="font-family:var(--font-body);font-size:13px;color:var(--dim);margin-bottom:20px;">
+      Cuentas externas (Google, etc.) con las que podrías iniciar sesión, además de tu email.
+    </p>
+
+    {% if messages %}
+    <div style="margin-bottom:16px;">
+      {% for msg in messages %}
+      <div class="message-item {{ msg.tags }}" style="margin-bottom:8px;">{{ msg }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if form.accounts %}
+    <form method="post" action="{% url 'socialaccount_connections' %}">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="form-non-field-errors" role="alert">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+      {% endif %}
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        {% for base_account in form.accounts %}
+        {% with account=base_account.get_provider_account %}
+        <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg);cursor:pointer;">
+          <input type="radio" name="account" value="{{ base_account.pk }}"
+                 style="accent-color:var(--accent);flex-shrink:0;">
+          <span style="flex:1;min-width:0;font-family:var(--font-body);font-size:14px;color:var(--text);">{{ account }}</span>
+          <span class="chip" style="cursor:default;">{{ account.get_brand.name }}</span>
+        </label>
+        {% endwith %}
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn-danger">Eliminar conexión</button>
+    </form>
+    {% else %}
+    <div class="empty-state" style="padding:20px;">
+      No tienes ninguna cuenta de terceros conectada.
+    </div>
+    {% endif %}
+
+    {% get_providers as socialaccount_providers %}
+    {% if socialaccount_providers %}
+    <h2 style="font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--text);margin:22px 0 12px;">
+      Añadir una cuenta de terceros
+    </h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      {% for provider in socialaccount_providers %}
+      <a href="{% provider_login_url provider.id process='connect' %}" class="btn-secondary">
+        Conectar {{ provider.name }}
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="font-family:var(--font-body);font-size:13px;color:var(--dim);margin-top:18px;line-height:1.6;">
+      La grupeta usa acceso por email, no hay proveedores externos configurados.
+    </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
