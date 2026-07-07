@@ -13,6 +13,10 @@ ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=['localhost', '127.0.0.
 SITE_URL = env('SITE_URL', default='http://localhost:8000')
 
 DJANGO_APPS = [
+    # 'daphne' debe ir la PRIMERA para que `runserver` sirva ASGI/WebSockets
+    # en local (Channels 4.x). Sin ella, runserver arranca en modo WSGI y
+    # rechaza el handshake del WebSocket -> el chat marca "Desconectado".
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
