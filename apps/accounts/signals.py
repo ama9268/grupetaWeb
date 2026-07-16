@@ -3,7 +3,6 @@ from django.dispatch import receiver
 from django.contrib.auth.models import User
 
 from .models import UserProfile
-from .emails import send_approval_request_email
 
 
 @receiver(post_save, sender=User)
@@ -11,5 +10,5 @@ def create_user_profile(sender, instance, created, **kwargs):
     if not created:
         return
     UserProfile.objects.create(user=instance)
-    if not instance.is_active:
-        send_approval_request_email(instance)
+    # El aviso de "solicitud pendiente" se dispara desde apps.groups.signals
+    # cuando se crea la Membership (que sabe a qué grupeta concreta avisar).

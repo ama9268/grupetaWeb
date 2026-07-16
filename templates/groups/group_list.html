@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Grupetas{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px;">
+  <div>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:28px;letter-spacing:-.5px;color:var(--text);">Grupetas</h1>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">Descubre y únete a otras grupetas, o crea la tuya</p>
+  </div>
+  <a href="{% url 'groups:create' %}" class="btn-primary">Crear grupeta</a>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+  {% for row in groups %}
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      {% if row.group.logo %}
+      <img src="{{ row.group.logo.url }}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border);">
+      {% else %}
+      <div class="avatar av-40">{{ row.group.name|slice:":1"|upper }}</div>
+      {% endif %}
+      <div>
+        <div style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);">{{ row.group.name }}</div>
+        {% if row.membership %}<span class="chip">{{ row.membership.get_status_display }}</span>{% endif %}
+      </div>
+    </div>
+    {% if row.group.description %}
+    <p style="font-family:var(--font-body);font-size:13px;color:var(--dim);margin-bottom:12px;">{{ row.group.description|truncatechars:100 }}</p>
+    {% endif %}
+    <div style="display:flex;gap:8px;">
+      <a href="{% url 'groups:detail' row.group.slug %}" class="btn-secondary" style="flex:1;text-align:center;">Ver</a>
+      {% if not row.membership %}
+      <form method="post" action="{% url 'groups:request_join' row.group.slug %}" style="flex:1;margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary" style="width:100%;">Unirme</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="empty-state card">No hay grupetas activas todavía.</div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -55,8 +55,30 @@
     </nav>
     {% endwith %}
 
-    {# Derecha: theme toggle + avatar #}
+    {# Derecha: selector de grupeta activa + theme toggle + avatar #}
     <div class="topbar-right">
+      {% with ns=request.resolver_match.app_name %}
+      {% if nav_available_groups and ns != 'dashboard' %}
+      <form method="post" action="{% url 'groups:set_active' %}" style="display:flex;align-items:center;margin:0;">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <select name="slug"
+                class="select"
+                style="width:auto;"
+                aria-label="Grupeta activa"
+                hx-post="{% url 'groups:set_active' %}"
+                hx-include="closest form"
+                hx-trigger="change"
+                hx-swap="none">
+          {% for g in nav_available_groups %}
+          <option value="{{ g.slug }}" {% if nav_active_group.slug == g.slug %}selected{% endif %}>{{ g.name }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn-secondary" style="padding:4px 10px;font-size:12px;margin-left:6px;">Cambiar</button></noscript>
+      </form>
+      {% endif %}
+      <a href="{% url 'groups:list' %}" class="nav-item" title="Mis grupetas" aria-label="Mis grupetas">Grupetas</a>
+      {% endwith %}
       <button class="online-pill"
               onclick="window.toggleTheme()"
               title="Cambiar tema claro/oscuro"

@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Gestión de salas · Chat{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:22px;">
+  <div>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:28px;letter-spacing:-.5px;color:var(--text);">
+      Gestión de salas
+    </h1>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">
+      Crea, renombra o archiva las salas generales del chat
+    </p>
+  </div>
+  <a href="{% url 'chat:room' %}" class="btn-secondary">← Volver al chat</a>
+</div>
+
+{# ===== Crear sala ===== #}
+<div class="card" style="margin-bottom:22px;">
+  <h2 style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);margin-bottom:12px;">Nueva sala</h2>
+  <form method="post" action="{% url 'chat:create_room' %}"
+        style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+    {% csrf_token %}
+    {% if form.group %}
+    <div style="flex:0 1 200px;min-width:0;">
+      {{ form.group }}
+      {% if form.group.errors %}<div class="form-error">{{ form.group.errors.0 }}</div>{% endif %}
+    </div>
+    {% endif %}
+    <div style="flex:1 1 240px;min-width:0;">
+      {{ form.name }}
+      {% if form.name.errors %}<div class="form-error">{{ form.name.errors.0 }}</div>{% endif %}
+    </div>
+    <button type="submit" class="btn-primary">Crear sala</button>
+  </form>
+</div>
+
+{# ===== Salas existentes ===== #}
+<h2 style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);margin-bottom:12px;">Salas generales</h2>
+
+<div style="display:flex;flex-direction:column;gap:12px;">
+  {% for r in rooms %}
+  <div class="card" style="display:flex;flex-direction:column;gap:12px;">
+
+    <div style="display:flex;align-items:center;gap:11px;min-width:0;">
+      <span class="avatar av-40">{{ r.name|slice:":1"|upper }}</span>
+      <div style="min-width:0;flex:1;">
+        <div style="font-family:var(--font-body);font-weight:700;font-size:15px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">/{{ r.slug }}</div>
+      </div>
+      <span class="chip" style="flex-shrink:0;">{{ r.group.name }}</span>
+      {% if r.is_archived %}
+      <span class="chip" style="flex-shrink:0;">Archivada</span>
+      {% endif %}
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+      {# Renombrar: cambia solo el nombre, el slug se mantiene #}
+      <form method="post" action="{% url 'chat:rename_room' r.slug %}"
+            style="display:flex;gap:8px;flex:1 1 240px;min-width:0;">
+        {% csrf_token %}
+        <input type="text" name="name" value="{{ r.name }}" maxlength="200"
+               class="input" style="flex:1;min-width:0;" aria-label="Nuevo nombre de {{ r.name }}">
+        <button type="submit" class="btn-secondary">Renombrar</button>
+      </form>
+
+      {# Archivar / reactivar #}
+      <form method="post" action="{% url 'chat:toggle_archive_room' r.slug %}">
+        {% csrf_token %}
+        {% if r.is_archived %}
+        <button type="submit" class="btn-secondary">Reactivar</button>
+        {% else %}
+        <button type="submit" class="btn-danger"
+                onclick="return confirm('¿Archivar «{{ r.name|escapejs }}»? Quedará en solo lectura.');">Archivar</button>
+        {% endif %}
+      </form>
+    </div>
+
+  </div>
+  {% empty %}
+  <div class="empty-state card">
+    <p>Todavía no hay salas generales. Crea la primera arriba.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

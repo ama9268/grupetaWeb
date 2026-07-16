@@ -14,12 +14,13 @@ def test_dashboard_renders(member_client):
 
 @pytest.mark.django_db
 def test_dashboard_next_event_attendees_only_confirmed(
-    member_client, approved_member, approved_moderator
+    member_client, approved_member, approved_moderator, default_group
 ):
     event = Event.objects.create(
         title='Proxima salida',
         start_at=timezone.now() + timedelta(days=2),
         created_by=approved_moderator,
+        group=default_group,
     )
     EventRSVP.objects.create(event=event, member=approved_member, response='si')
     EventRSVP.objects.create(event=event, member=approved_moderator, response='no')

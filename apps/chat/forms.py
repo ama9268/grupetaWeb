@@ -3,6 +3,36 @@ from django import forms
 from django.conf import settings
 
 from apps.media_gallery.cloudinary_utils import ALLOWED_IMAGE_TYPES, ALLOWED_VIDEO_TYPES
+from .models import ChatRoom
+
+
+class ChatRoomForm(forms.Form):
+    """Nombre (+ grupeta, al crear) de una sala general. El slug se deriva aparte."""
+    name = forms.CharField(
+        label='Nombre de la sala',
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'input',
+            'placeholder': 'Ej. Salidas de finde',
+            'autocomplete': 'off',
+        }),
+    )
+
+    def __init__(self, *args, moderated_groups=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if moderated_groups is not None:
+            from django import forms as dj_forms
+            self.fields['group'] = dj_forms.ModelChoiceField(
+                queryset=moderated_groups, label='Grupeta',
+                widget=dj_forms.Select(attrs={'class': 'select'}),
+            )
+            self.order_fields(['group', 'name'])
+
+    def clean_name(self):
+        name = self.cleaned_data['name'].strip()
+        if len(name) < 2:
+            raise forms.ValidationError('El nombre debe tener al menos 2 caracteres.')
+        return name
 
 MAGIC_BYTES_LENGTH = 261  # filetype solo necesita los primeros ~261 bytes
 

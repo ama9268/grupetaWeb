@@ -4,7 +4,7 @@ from django.core import mail
 from django.test import Client
 from django.urls import reverse
 
-from .models import UserProfile
+from apps.groups.models import Group, Membership
 
 
 @pytest.fixture
@@ -15,8 +15,7 @@ def admin_user(db):
         password='testpass123',
         is_active=True,
     )
-    user.profile.role = 'admin'
-    user.profile.status = 'approved'
+    user.profile.is_admin = True
     user.profile.save()
     return user
 
@@ -29,143 +28,167 @@ def client_admin(admin_user):
 
 
 @pytest.mark.django_db
-def test_signup_creates_inactive_user_pending_approval():
+def test_signup_creates_inactive_user_pending_approval(default_group):
     client = Client()
     response = client.post(reverse('account_signup'), {
         'email': 'nuevo@test.com',
         'username': 'nuevo',
         'password1': 'SuperSecure123!',
         'password2': 'SuperSecure123!',
+        'group': default_group.pk,
     })
     user = User.objects.filter(email='nuevo@test.com').first()
     assert user is not None
     assert user.username == 'nuevo'
     assert user.is_active is False
-    assert user.profile.status == 'pending'
+    assert not user.profile.is_approved
 
 
 @pytest.mark.django_db
-def test_signup_sends_email_to_admins(admin_user, settings):
-    settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+def test_signup_creates_pending_membership_in_chosen_group(default_group):
     client = Client()
     client.post(reverse('account_signup'), {
-        'email': 'nuevo@test.com',
-        'username': 'nuevo',
+        'email': 'nuevo3@test.com',
+        'username': 'nuevo3',
         'password1': 'SuperSecure123!',
         'password2': 'SuperSecure123!',
+        'group': default_group.pk,
     })
-    assert len(mail.outbox) == 1
-    assert admin_user.email in mail.outbox[0].recipients()
+    user = User.objects.get(email='nuevo3@test.com')
+    membership = Membership.objects.get(user=user, group=default_group)
+    assert membership.status == Membership.Status.PENDING
+    assert membership.role == Membership.Role.MEMBER
 
 
 @pytest.mark.django_db
-def test_approve_user_activates_account(admin_user, settings):
+def test_pending_membership_notifies_group_moderators_and_admins(
+    admin_user, approved_moderator, default_group, settings
+):
     settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
-    pending = User.objects.create_user(
+    other_user = User.objects.create_user(
+        username='nuevo', email='nuevo@test.com', password='testpass123', is_active=False,
+    )
+    Membership.objects.create(user=other_user, group=default_group, status=Membership.Status.PENDING)
+
+    assert len(mail.outbox) == 1
+    recipients = mail.outbox[0].recipients()
+    assert admin_user.email in recipients
+    assert approved_moderator.email in recipients
+
+
+@pytest.mark.django_db
+def test_pending_membership_does_not_notify_moderators_of_other_group(
+    admin_user, approved_moderator, settings
+):
+    settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+    other_group = Group.objects.create(name='Otra grupeta', slug='otra-grupeta')
+    other_user = User.objects.create_user(
+        username='nuevo2', email='nuevo2@test.com', password='testpass123', is_active=False,
+    )
+    Membership.objects.create(user=other_user, group=other_group, status=Membership.Status.PENDING)
+
+    recipients = mail.outbox[0].recipients()
+    # approved_moderator modera default_group, no other_group.
+    assert approved_moderator.email not in recipients
+    # El Admin global se entera de las solicitudes de cualquier grupeta.
+    assert admin_user.email in recipients
+
+
+@pytest.mark.django_db
+def test_approve_user_activates_account(admin_user, default_group, settings):
+    settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+    pending_user = User.objects.create_user(
         username='pending@test.com',
         email='pending@test.com',
         password='testpass123',
         is_active=False,
     )
-    pending.profile.status = 'pending'
-    pending.profile.save()
+    membership = Membership.objects.create(
+        user=pending_user, group=default_group, status=Membership.Status.PENDING,
+    )
 
     client = Client()
     client.login(username='admin@test.com', password='testpass123')
-    client.post(reverse('accounts:approve_user', args=[pending.pk]))
+    client.post(reverse('accounts:approve_user', args=[membership.pk]))
 
-    pending.refresh_from_db()
-    assert pending.is_active is True
-    assert pending.profile.status == 'approved'
-    assert any(pending.email in m.to for m in mail.outbox)
-
-
-@pytest.mark.django_db
-def test_moderator_cannot_promote_member_to_admin(moderator_client, approved_member):
-    resp = moderator_client.post(
-        reverse('accounts:change_role', args=[approved_member.pk]), {'role': 'admin'}
-    )
-    assert resp.status_code == 403
-    approved_member.profile.refresh_from_db()
-    assert approved_member.profile.role == 'member'
+    pending_user.refresh_from_db()
+    membership.refresh_from_db()
+    assert pending_user.is_active is True
+    assert membership.status == Membership.Status.APPROVED
+    assert any(pending_user.email in m.to for m in mail.outbox)
 
 
 @pytest.mark.django_db
-def test_moderator_cannot_modify_an_admin(moderator_client, admin_user):
-    resp = moderator_client.post(
-        reverse('accounts:change_role', args=[admin_user.pk]), {'role': 'member'}
+def test_reject_user_does_not_activate_account(admin_user, default_group):
+    pending_user = User.objects.create_user(
+        username='pending2@test.com',
+        email='pending2@test.com',
+        password='testpass123',
+        is_active=False,
     )
-    assert resp.status_code == 403
-    admin_user.profile.refresh_from_db()
-    assert admin_user.profile.role == 'admin'
+    membership = Membership.objects.create(
+        user=pending_user, group=default_group, status=Membership.Status.PENDING,
+    )
+
+    client = Client()
+    client.login(username='admin@test.com', password='testpass123')
+    client.post(reverse('accounts:reject_user', args=[membership.pk]))
+
+    pending_user.refresh_from_db()
+    membership.refresh_from_db()
+    assert pending_user.is_active is False
+    assert membership.status == Membership.Status.REJECTED
 
 
 @pytest.mark.django_db
-def test_moderator_can_set_moderator_role(moderator_client, approved_member):
-    moderator_client.post(
-        reverse('accounts:change_role', args=[approved_member.pk]), {'role': 'moderator'}
-    )
-    approved_member.profile.refresh_from_db()
-    assert approved_member.profile.role == 'moderator'
+def test_change_role_ignores_admin_value(moderator_client, approved_member, default_group):
+    membership = Membership.objects.get(user=approved_member, group=default_group)
+    resp = moderator_client.post(reverse('accounts:change_role', args=[membership.pk]), {'role': 'admin'})
+    assert resp.status_code == 302
+    membership.refresh_from_db()
+    assert membership.role == Membership.Role.MEMBER
 
 
 @pytest.mark.django_db
-def test_admin_can_promote_to_admin(client_admin, approved_member):
-    client_admin.post(
-        reverse('accounts:change_role', args=[approved_member.pk]), {'role': 'admin'}
-    )
-    approved_member.profile.refresh_from_db()
-    assert approved_member.profile.role == 'admin'
+def test_moderator_can_promote_member_to_moderator(moderator_client, approved_member, default_group):
+    membership = Membership.objects.get(user=approved_member, group=default_group)
+    moderator_client.post(reverse('accounts:change_role', args=[membership.pk]), {'role': 'moderator'})
+    membership.refresh_from_db()
+    assert membership.role == Membership.Role.MODERATOR
 
 
 @pytest.mark.django_db
-def test_cannot_demote_last_admin(client_admin, admin_user):
-    # admin_user es el único admin activo: no puede degradarse a sí mismo.
-    client_admin.post(
-        reverse('accounts:change_role', args=[admin_user.pk]), {'role': 'member'}
-    )
-    admin_user.profile.refresh_from_db()
-    assert admin_user.profile.role == 'admin'
+def test_cannot_demote_last_moderator_of_group(moderator_client, approved_moderator, default_group):
+    membership = Membership.objects.get(user=approved_moderator, group=default_group)
+    moderator_client.post(reverse('accounts:change_role', args=[membership.pk]), {'role': 'member'})
+    membership.refresh_from_db()
+    # No se pudo degradar: approved_moderator es el único moderador de la grupeta.
+    assert membership.role == Membership.Role.MODERATOR
 
 
 @pytest.mark.django_db
-def test_can_demote_admin_when_another_admin_exists(client_admin, admin_user):
-    other = User.objects.create_user(
-        username='otro-admin', email='otro-admin@test.com',
-        password='testpass123', is_active=True,
+def test_can_demote_moderator_when_another_exists(moderator_client, approved_moderator, default_group):
+    other_mod = User.objects.create_user(
+        username='otro-mod', email='otro-mod@test.com', password='testpass123', is_active=True,
     )
-    other.profile.role = 'admin'
-    other.profile.status = 'approved'
-    other.profile.save()
+    Membership.objects.create(
+        user=other_mod, group=default_group,
+        role=Membership.Role.MODERATOR, status=Membership.Status.APPROVED,
+    )
 
-    client_admin.post(
-        reverse('accounts:change_role', args=[other.pk]), {'role': 'member'}
-    )
-    other.profile.refresh_from_db()
-    assert other.profile.role == 'member'
+    membership = Membership.objects.get(user=approved_moderator, group=default_group)
+    moderator_client.post(reverse('accounts:change_role', args=[membership.pk]), {'role': 'member'})
+    membership.refresh_from_db()
+    assert membership.role == Membership.Role.MEMBER
 
 
 @pytest.mark.django_db
 def test_manage_users_renders_for_moderator(moderator_client, admin_user):
-    # El panel renderiza para un moderador; un admin de la lista se muestra en solo lectura.
     resp = moderator_client.get(reverse('accounts:manage_users'))
     assert resp.status_code == 200
-    assert b'Admin' in resp.content
 
 
 @pytest.mark.django_db
-def test_member_cannot_access_manage_users(admin_user):
-    member = User.objects.create_user(
-        username='miembro@test.com',
-        email='miembro@test.com',
-        password='testpass123',
-        is_active=True,
-    )
-    member.profile.role = 'member'
-    member.profile.status = 'approved'
-    member.profile.save()
-
-    client = Client()
-    client.login(username='miembro@test.com', password='testpass123')
-    response = client.get(reverse('accounts:manage_users'))
+def test_member_cannot_access_manage_users(member_client):
+    response = member_client.get(reverse('accounts:manage_users'))
     assert response.status_code == 403

@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+from apps.groups.querysets import GroupScopedQuerySet
+
 
 class Event(models.Model):
     class State(models.TextChoices):
@@ -19,6 +21,11 @@ class Event(models.Model):
 
     # Estados que se muestran por defecto en el listado (activos/próximos).
     DEFAULT_LIST_STATES = (State.PENDIENTE, State.ACEPTADO)
+
+    group = models.ForeignKey(
+        'groups.Group', on_delete=models.PROTECT, related_name='events'
+    )
+    objects = GroupScopedQuerySet.as_manager()
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -49,6 +56,7 @@ class Event(models.Model):
         indexes = [
             models.Index(fields=['start_at'], name='events_event_start_at_idx'),
             models.Index(fields=['state'], name='events_event_state_idx'),
+            models.Index(fields=['group', 'start_at'], name='events_event_group_start_idx'),
         ]
 
     def __str__(self):
@@ -77,6 +85,7 @@ class Event(models.Model):
             Album.objects.create(
                 title=f'{self.title} — {self.start_at:%d/%m/%Y}',
                 event=self,
+                group=self.group,
                 created_by=by_user,
             )
 

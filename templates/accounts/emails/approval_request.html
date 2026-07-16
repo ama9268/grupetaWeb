@@ -2,12 +2,12 @@
 <html>
 <body>
 <p>Hola,</p>
-<p>Hay un nuevo registro pendiente de aprobación en GrupetaWeb:</p>
+<p>Hay una nueva solicitud pendiente de aprobación en la grupeta <strong>{{ group.name }}</strong>:</p>
 <ul>
     <li><strong>Email:</strong> {{ new_user.email }}</li>
     <li><strong>Fecha:</strong> {{ new_user.date_joined }}</li>
 </ul>
-<p>Accede al panel de gestión para aprobar o rechazar el registro:</p>
+<p>Accede al panel de gestión para aprobar o rechazar la solicitud:</p>
 <p><a href="{{ site_url }}/accounts/manage/">Gestionar usuarios</a></p>
 <p>— GrupetaWeb</p>
 </body>

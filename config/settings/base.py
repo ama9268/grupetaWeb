@@ -24,6 +24,7 @@ DJANGO_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'django.contrib.gis',
 ]
 
 THIRD_PARTY_APPS = [
@@ -37,6 +38,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    'apps.groups',
     'apps.accounts',
     'apps.members',
     'apps.dashboard',
@@ -74,6 +76,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.groups.context_processors.active_group',
             ],
         },
     },
@@ -109,6 +112,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 ACCOUNT_ADAPTER = 'apps.accounts.adapters.AccountAdapter'
+ACCOUNT_FORMS = {'signup': 'apps.accounts.forms.GroupSignupForm'}
 ACCOUNT_LOGIN_METHODS = {'email'}
 # El login sigue siendo por email; `username` es el identificador público visible.
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
@@ -137,4 +141,10 @@ CLOUDINARY_STORAGE = {
 # Límites de subida de media (bytes). Ajustables según el plan de Cloudinary.
 MAX_IMAGE_UPLOAD_SIZE = env.int('MAX_IMAGE_UPLOAD_SIZE', default=10 * 1024 * 1024)   # 10 MB
 MAX_VIDEO_UPLOAD_SIZE = env.int('MAX_VIDEO_UPLOAD_SIZE', default=100 * 1024 * 1024)  # 100 MB
+
+# Strava (import de rutas en apps.routes)
+STRAVA_CLIENT_ID = env('STRAVA_CLIENT_ID', default='')
+STRAVA_CLIENT_SECRET = env('STRAVA_CLIENT_SECRET', default='')
+STRAVA_REDIRECT_URI = env('STRAVA_REDIRECT_URI', default='http://127.0.0.1:8000/routes/strava/callback/')
+STRAVA_ENCRYPTION_KEY = env('STRAVA_ENCRYPTION_KEY', default='')
 

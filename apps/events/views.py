@@ -5,11 +5,13 @@ from django.utils import timezone
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
 
 from apps.accounts.mixins import ApprovedUserMixin, ModeratorRequiredMixin
-from apps.accounts.decorators import approved_required, moderator_required
+from apps.accounts.decorators import approved_required
+from apps.groups.mixins import ActiveGroupMixin, GroupModeratorRequiredMixin
+from apps.groups.permissions import require_group_member, require_group_moderator
 from apps.media_gallery.cloudinary_utils import upload_image, delete_asset
 from apps.media_gallery.forms import MediaUploadForm
 from apps.media_gallery.services import upload_media_item
-from apps.routes.services import create_route_from_gpx
+from apps.routes.services import create_route_from_gpx, duplicate_warning_message
 
 from .models import Event, EventRSVP
 from .forms import EventForm
@@ -30,7 +32,8 @@ def _apply_route_selection(event, form, request):
     """
     mode = form.cleaned_data.get('route_mode') or 'none'
     if mode == 'new' and form.cleaned_data.get('gpx_file'):
-        route, parsed = create_route_from_gpx(
+        route, parsed, duplicate = create_route_from_gpx(
+            group=event.group,
             author=request.user,
             gpx_file=form.cleaned_data['gpx_file'],
             title=event.title,
@@ -39,15 +42,17 @@ def _apply_route_selection(event, form, request):
         event.associated_route = route
         if not parsed:
             messages.warning(request, 'La ruta se creó, pero no se pudieron extraer sus estadísticas del GPX.')
+        if duplicate:
+            messages.warning(request, duplicate_warning_message(duplicate))
 
 
-class EventListView(ApprovedUserMixin, ListView):
+class EventListView(ApprovedUserMixin, ActiveGroupMixin, ListView):
     model = Event
     context_object_name = 'events'
 
     def get_queryset(self):
         estado = self.request.GET.get('estado', 'activos')
-        qs = Event.objects.select_related('created_by', 'associated_route')
+        qs = Event.objects.filter(group=self.active_group).select_related('created_by', 'associated_route')
         if estado == 'todos':
             pass
         elif estado in Event.State.values:
@@ -74,7 +79,11 @@ class EventDetailView(ApprovedUserMixin, DetailView):
     context_object_name = 'event'
 
     def get_queryset(self):
-        return Event.objects.select_related('created_by', 'associated_route')
+        # Acceso por enlace directo: cualquier grupeta a la que pertenezca el
+        # usuario (no solo la "activa"), a diferencia del listado.
+        return Event.objects.filter(
+            group__in=self.request.user.profile.approved_groups()
+        ).select_related('created_by', 'associated_route', 'group')
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -92,16 +101,22 @@ class EventDetailView(ApprovedUserMixin, DetailView):
         ctx['album'] = album
         ctx['media_items'] = album.items.select_related('uploaded_by') if album else []
         ctx['media_form'] = MediaUploadForm()
-        ctx['can_moderate'] = getattr(self.request.user.profile, 'is_moderator', False)
+        ctx['can_moderate'] = self.request.user.profile.is_group_moderator(event.group)
         ctx['can_upload'] = album is not None and not event.is_archived
         ctx['rsvp_options'] = RSVP_OPTIONS
         return ctx
 
 
-class EventCreateView(ModeratorRequiredMixin, CreateView):
+class EventCreateView(ModeratorRequiredMixin, ActiveGroupMixin, CreateView):
     model = Event
     form_class = EventForm
     template_name = 'events/event_create.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        kwargs['initial_group'] = self.active_group
+        return kwargs
 
     def form_valid(self, form):
         event = form.save(commit=False)
@@ -115,10 +130,15 @@ class EventCreateView(ModeratorRequiredMixin, CreateView):
         return redirect('events:detail', pk=event.pk)
 
 
-class EventUpdateView(ModeratorRequiredMixin, UpdateView):
+class EventUpdateView(ApprovedUserMixin, GroupModeratorRequiredMixin, UpdateView):
     model = Event
     form_class = EventForm
     template_name = 'events/event_edit.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         event = form.save(commit=False)
@@ -135,18 +155,20 @@ class EventUpdateView(ModeratorRequiredMixin, UpdateView):
         return redirect('events:detail', pk=event.pk)
 
 
-@moderator_required
+@approved_required
 def event_accept(request, pk):
     event = get_object_or_404(Event, pk=pk)
+    require_group_moderator(request.user, event.group)
     if request.method == 'POST':
         event.accept(by_user=request.user)
         messages.success(request, f'Evento "{event.title}" aceptado. Se ha creado su álbum.')
     return redirect('events:detail', pk=pk)
 
 
-@moderator_required
+@approved_required
 def event_cancel(request, pk):
     event = get_object_or_404(Event, pk=pk)
+    require_group_moderator(request.user, event.group)
     if request.method == 'POST':
         event.cancel()
         messages.success(request, f'Evento "{event.title}" cancelado.')
@@ -156,6 +178,7 @@ def event_cancel(request, pk):
 @approved_required
 def event_media_upload(request, pk):
     event = get_object_or_404(Event, pk=pk)
+    require_group_member(request.user, event.group)
     if request.method != 'POST':
         return redirect('events:detail', pk=pk)
 
@@ -170,6 +193,7 @@ def event_media_upload(request, pk):
             media_type=form.cleaned_data['media_type'],
             file=form.cleaned_data['file'],
             title=form.cleaned_data.get('title', ''),
+            group=event.group,
             album=event.album,
         )
         messages.success(request, 'Archivo subido correctamente.')
@@ -184,6 +208,7 @@ def rsvp_view(request, event_id, response):
         return redirect('events:detail', pk=event_id)
 
     event = get_object_or_404(Event, pk=event_id)
+    require_group_member(request.user, event.group)
     if response not in EventRSVP.Response.values:
         return redirect('events:detail', pk=event_id)
 

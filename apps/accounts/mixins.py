@@ -7,32 +7,39 @@ class ApprovedUserMixin(LoginRequiredMixin):
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
-        if not hasattr(request.user, 'profile') or request.user.profile.status != 'approved':
+        if not hasattr(request.user, 'profile') or not request.user.profile.is_approved:
             return redirect('accounts:pending')
         return super().dispatch(request, *args, **kwargs)
 
 
-class RoleRequiredMixin(ApprovedUserMixin):
-    required_roles = []
+class ModeratorRequiredMixin(ApprovedUserMixin):
+    """Exige moderar AL MENOS una grupeta (gating de pantallas de creación).
+
+    Para permisos sobre un objeto ya existente de una grupeta concreta, usar
+    `apps.groups.permissions.require_group_moderator` (o el mixin de objeto
+    equivalente), no este mixin.
+    """
 
     def dispatch(self, request, *args, **kwargs):
-        # Comprobar el rol ANTES de ejecutar la vista, para no aplicar efectos
-        # secundarios (crear/editar) a usuarios sin permiso. Solo se comprueba
-        # cuando el usuario está autenticado y aprobado; el resto de casos
-        # (login/aprobación) los resuelve ApprovedUserMixin en super().dispatch.
         if (
             request.user.is_authenticated
             and hasattr(request.user, 'profile')
-            and request.user.profile.status == 'approved'
-            and request.user.profile.role not in self.required_roles
+            and request.user.profile.is_approved
+            and not request.user.profile.is_moderator
         ):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
 
-class ModeratorRequiredMixin(RoleRequiredMixin):
-    required_roles = ['admin', 'moderator']
+class AdminRequiredMixin(ApprovedUserMixin):
+    """Exige el rol Admin GLOBAL (no confundir con moderador de una grupeta)."""
 
-
-class AdminRequiredMixin(RoleRequiredMixin):
-    required_roles = ['admin']
+    def dispatch(self, request, *args, **kwargs):
+        if (
+            request.user.is_authenticated
+            and hasattr(request.user, 'profile')
+            and request.user.profile.is_approved
+            and not request.user.profile.is_admin
+        ):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)

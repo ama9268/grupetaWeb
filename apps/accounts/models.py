@@ -2,21 +2,20 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class UserProfile(models.Model):
-    ROLE_CHOICES = [
-        ('admin', 'Admin'),
-        ('moderator', 'Moderador'),
-        ('member', 'Miembro'),
-    ]
-    STATUS_CHOICES = [
-        ('pending', 'Pendiente'),
-        ('approved', 'Aprobado'),
-        ('rejected', 'Rechazado'),
-    ]
+class UserProfileQuerySet(models.QuerySet):
+    def approved(self):
+        from apps.groups.models import Membership
+        return self.filter(
+            models.Q(is_admin=True)
+            | models.Q(user__memberships__status=Membership.Status.APPROVED)
+        ).distinct()
 
+
+class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    # Rol GLOBAL: ve y gestiona todas las grupetas, como si perteneciera a todas.
+    # El rol Moderador, en cambio, es por grupeta (ver apps.groups.Membership).
+    is_admin = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Campos de perfil ciclista
@@ -27,25 +26,67 @@ class UserProfile(models.Model):
     total_routes = models.IntegerField(default=0)
     total_events_attended = models.IntegerField(default=0)
 
+    objects = UserProfileQuerySet.as_manager()
+
     class Meta:
         indexes = [
-            models.Index(fields=['status']),
-            models.Index(fields=['role']),
+            models.Index(fields=['is_admin'], name='accounts_up_is_admin_idx'),
         ]
 
     def __str__(self):
         # Identificador público = username (el email es dato privado).
         identifier = self.user.username or self.user.email
-        return f'{identifier} ({self.get_role_display()} / {self.get_status_display()})'
+        return f'{identifier} ({self.role_label})'
 
     @property
     def is_approved(self):
-        return self.status == 'approved'
+        """¿Tiene acceso a la plataforma? Admin global, o al menos una Membership aprobada."""
+        if self.is_admin:
+            return True
+        from apps.groups.models import Membership
+        return Membership.objects.filter(user=self.user, status=Membership.Status.APPROVED).exists()
 
-    @property
-    def is_admin(self):
-        return self.role == 'admin'
+    def approved_groups(self):
+        """Grupetas donde el usuario es miembro aprobado (todas, si es Admin global)."""
+        from apps.groups.models import Group, Membership
+        if self.is_admin:
+            return Group.objects.active()
+        return Group.objects.filter(
+            memberships__user=self.user,
+            memberships__status=Membership.Status.APPROVED,
+            is_active=True,
+        ).distinct()
+
+    def moderated_groups(self):
+        """Grupetas donde el usuario es moderador aprobado (todas, si es Admin global)."""
+        from apps.groups.models import Group, Membership
+        if self.is_admin:
+            return Group.objects.active()
+        return Group.objects.filter(
+            memberships__user=self.user,
+            memberships__status=Membership.Status.APPROVED,
+            memberships__role=Membership.Role.MODERATOR,
+            is_active=True,
+        ).distinct()
+
+    def is_group_moderator(self, group):
+        return self.is_admin or self.moderated_groups().filter(pk=group.pk).exists()
+
+    def is_member_of(self, group):
+        return self.is_admin or self.approved_groups().filter(pk=group.pk).exists()
 
     @property
     def is_moderator(self):
-        return self.role in ('admin', 'moderator')
+        """¿Modera AL MENOS una grupeta? Para dar acceso a pantallas de creación
+        (p.ej. "nuevo evento"). Para permisos sobre un objeto ya existente de una
+        grupeta concreta, usar `is_group_moderator(group)`."""
+        return self.is_admin or self.moderated_groups().exists()
+
+    @property
+    def role_label(self):
+        """Etiqueta de rol para mostrar en la UI (badges de directorio/perfil)."""
+        if self.is_admin:
+            return 'Admin'
+        if self.is_moderator:
+            return 'Moderador'
+        return 'Miembro'

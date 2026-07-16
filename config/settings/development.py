@@ -9,6 +9,8 @@ INTERNAL_IPS = ['127.0.0.1']
 DATABASES = {
     'default': env.db('DATABASE_URL'),
 }
+# Backend con soporte GeoDjango/PostGIS (apps.routes usa LineStringField/PointField).
+DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

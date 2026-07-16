@@ -5,6 +5,8 @@ from channels.testing import WebsocketCommunicator
 from django.contrib.auth.models import User
 from django.urls import re_path, reverse
 
+from apps.groups.constants import DEFAULT_GROUP_NAME, DEFAULT_GROUP_SLUG
+from apps.groups.models import Group, Membership
 from .consumers import ChatConsumer
 from .models import ChatRoom, Message
 
@@ -14,35 +16,39 @@ test_asgi = URLRouter([
 ])
 
 
+def _default_group():
+    group, _ = Group.objects.get_or_create(slug=DEFAULT_GROUP_SLUG, defaults={'name': DEFAULT_GROUP_NAME})
+    return group
+
+
 @database_sync_to_async
 def create_chat_user():
+    group, _ = Group.objects.get_or_create(slug=DEFAULT_GROUP_SLUG, defaults={'name': DEFAULT_GROUP_NAME})
     user = User.objects.create_user(
         username='chat@test.com', email='chat@test.com',
         password='testpass123', is_active=True,
     )
-    user.profile.role = 'member'
-    user.profile.status = 'approved'
-    user.profile.save()
+    Membership.objects.create(user=user, group=group, status=Membership.Status.APPROVED)
     return user
 
 
 @database_sync_to_async
 def create_pending_user():
+    group, _ = Group.objects.get_or_create(slug=DEFAULT_GROUP_SLUG, defaults={'name': DEFAULT_GROUP_NAME})
     user = User.objects.create_user(
         username='pending@test.com', email='pending@test.com',
         password='testpass123', is_active=True,
     )
-    user.profile.role = 'member'
-    user.profile.status = 'pending'
-    user.profile.save()
+    Membership.objects.create(user=user, group=group, status=Membership.Status.PENDING)
     return user
 
 
 @database_sync_to_async
 def create_room(slug='general', name='General', archived=False):
     # La migración de datos ya siembra la sala 'general'; reutilizarla si existe.
+    group, _ = Group.objects.get_or_create(slug=DEFAULT_GROUP_SLUG, defaults={'name': DEFAULT_GROUP_NAME})
     room, _ = ChatRoom.objects.get_or_create(
-        slug=slug, defaults={'name': name, 'is_archived': archived}
+        slug=slug, defaults={'name': name, 'is_archived': archived, 'group': group}
     )
     if room.is_archived != archived:
         room.is_archived = archived
@@ -154,9 +160,10 @@ def test_chat_sidebar_splits_and_orders_event_rooms(moderator_client, approved_m
     from apps.events.models import Event
 
     now = timezone.now()
-    near = Event.objects.create(title='Cercano', start_at=now + timedelta(days=2), created_by=approved_moderator)
-    far = Event.objects.create(title='Lejano', start_at=now + timedelta(days=20), created_by=approved_moderator)
-    cancelado = Event.objects.create(title='Cancelado', start_at=now + timedelta(days=3), created_by=approved_moderator)
+    group = _default_group()
+    near = Event.objects.create(title='Cercano', start_at=now + timedelta(days=2), created_by=approved_moderator, group=group)
+    far = Event.objects.create(title='Lejano', start_at=now + timedelta(days=20), created_by=approved_moderator, group=group)
+    cancelado = Event.objects.create(title='Cancelado', start_at=now + timedelta(days=3), created_by=approved_moderator, group=group)
     cancelado.cancel()
 
     response = moderator_client.get(reverse('chat:room_detail', args=['general']))
@@ -171,7 +178,7 @@ def test_chat_sidebar_splits_and_orders_event_rooms(moderator_client, approved_m
 
 @pytest.mark.django_db
 def test_delete_message_marks_deleted_and_broadcasts(member_client, approved_member, in_memory_channel_layer):
-    room = ChatRoom.objects.create(slug='sala-test', name='Test')
+    room = ChatRoom.objects.create(slug='sala-test', name='Test', group=_default_group())
     msg = Message.objects.create(room=room, user=approved_member, content='hola')
     response = member_client.post(reverse('chat:delete_message', args=[msg.pk]))
     assert response.status_code == 302
@@ -190,7 +197,7 @@ TXT_BYTES = b'esto no es una imagen ni un video, es texto plano' * 4
 def test_upload_attachment_creates_message(member_client, approved_member, in_memory_channel_layer):
     from unittest.mock import patch
     from django.core.files.uploadedfile import SimpleUploadedFile
-    room = ChatRoom.objects.create(slug='sala-adj', name='Adjuntos')
+    room = ChatRoom.objects.create(slug='sala-adj', name='Adjuntos', group=_default_group())
     upload = SimpleUploadedFile('foto.png', PNG_BYTES, content_type='image/png')
 
     with patch('apps.chat.views.upload_image', return_value=('grupetaweb/x', 'https://cdn/x.webp')) as m:
@@ -211,7 +218,7 @@ def test_upload_attachment_creates_message(member_client, approved_member, in_me
 @pytest.mark.django_db
 def test_upload_rejects_non_media_file(member_client, approved_member):
     from django.core.files.uploadedfile import SimpleUploadedFile
-    ChatRoom.objects.create(slug='sala-adj2', name='Adjuntos2')
+    ChatRoom.objects.create(slug='sala-adj2', name='Adjuntos2', group=_default_group())
     bad = SimpleUploadedFile('nota.txt', TXT_BYTES, content_type='text/plain')
     response = member_client.post(
         reverse('chat:upload_attachment', args=['sala-adj2']), {'file': bad}
@@ -223,7 +230,7 @@ def test_upload_rejects_non_media_file(member_client, approved_member):
 @pytest.mark.django_db
 def test_upload_rejected_on_archived_room(member_client, approved_member):
     from django.core.files.uploadedfile import SimpleUploadedFile
-    ChatRoom.objects.create(slug='sala-arch', name='Archivada', is_archived=True)
+    ChatRoom.objects.create(slug='sala-arch', name='Archivada', is_archived=True, group=_default_group())
     upload = SimpleUploadedFile('foto.png', PNG_BYTES, content_type='image/png')
     response = member_client.post(
         reverse('chat:upload_attachment', args=['sala-arch']), {'file': upload}
@@ -235,7 +242,7 @@ def test_upload_rejected_on_archived_room(member_client, approved_member):
 @pytest.mark.django_db
 def test_delete_message_removes_cloudinary_asset(member_client, approved_member, in_memory_channel_layer):
     from unittest.mock import patch
-    room = ChatRoom.objects.create(slug='sala-del', name='Del')
+    room = ChatRoom.objects.create(slug='sala-del', name='Del', group=_default_group())
     msg = Message.objects.create(
         room=room, user=approved_member, attachment_type='video',
         attachment_url='https://cdn/v.mp4', attachment_public_id='grupetaweb/v',
@@ -244,6 +251,64 @@ def test_delete_message_removes_cloudinary_asset(member_client, approved_member,
         response = member_client.post(reverse('chat:delete_message', args=[msg.pk]))
     assert response.status_code == 302
     m.assert_called_once_with('grupetaweb/v', resource_type='video')
+
+
+# --- Gestión de salas (admin/moderador) ---
+
+@pytest.mark.django_db
+def test_manage_rooms_page_requires_moderator(member_client, moderator_client):
+    # Miembro normal: prohibido.
+    assert member_client.get(reverse('chat:manage_rooms')).status_code == 403
+    # Moderador: acceso.
+    assert moderator_client.get(reverse('chat:manage_rooms')).status_code == 200
+
+
+@pytest.mark.django_db
+def test_moderator_creates_room_with_unique_slug(moderator_client):
+    group = _default_group()
+    ChatRoom.objects.create(slug='salidas-de-finde', name='Existente', group=group)
+    resp = moderator_client.post(
+        reverse('chat:create_room'), {'name': 'Salidas de finde', 'group': group.pk}
+    )
+    assert resp.status_code == 302
+    nueva = ChatRoom.objects.get(name='Salidas de finde')
+    assert nueva.category == 'general'
+    assert nueva.slug == 'salidas-de-finde-2'  # deduplicado
+
+
+@pytest.mark.django_db
+def test_member_cannot_create_room(member_client):
+    resp = member_client.post(reverse('chat:create_room'), {'name': 'Prohibida'})
+    assert resp.status_code == 403
+    assert not ChatRoom.objects.filter(name='Prohibida').exists()
+
+
+@pytest.mark.django_db
+def test_rename_keeps_slug(moderator_client):
+    room = ChatRoom.objects.create(slug='mi-sala', name='Nombre viejo', group=_default_group())
+    resp = moderator_client.post(reverse('chat:rename_room', args=['mi-sala']), {'name': 'Nombre nuevo'})
+    assert resp.status_code == 302
+    room.refresh_from_db()
+    assert room.name == 'Nombre nuevo'
+    assert room.slug == 'mi-sala'  # el slug NO cambia
+
+
+@pytest.mark.django_db
+def test_toggle_archive_room(moderator_client):
+    room = ChatRoom.objects.create(slug='temp', name='Temporal', group=_default_group())
+    moderator_client.post(reverse('chat:toggle_archive_room', args=['temp']))
+    room.refresh_from_db()
+    assert room.is_archived is True
+    moderator_client.post(reverse('chat:toggle_archive_room', args=['temp']))
+    room.refresh_from_db()
+    assert room.is_archived is False
+
+
+@pytest.mark.django_db
+def test_event_room_is_not_manageable_here(moderator_client):
+    ChatRoom.objects.create(slug='evento-1', name='Evento', category='eventos', group=_default_group())
+    assert moderator_client.post(reverse('chat:rename_room', args=['evento-1']), {'name': 'X'}).status_code == 404
+    assert moderator_client.post(reverse('chat:toggle_archive_room', args=['evento-1'])).status_code == 404
 
 
 @pytest.mark.django_db(transaction=True)

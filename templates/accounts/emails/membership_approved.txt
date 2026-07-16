@@ -1,0 +1,6 @@
+Hola {{ user.email }},
+
+Te han admitido en la grupeta {{ group.name }}. Ya puedes ver y participar en su contenido:
+{{ site_url }}/accounts/login/
+
+— GrupetaWeb

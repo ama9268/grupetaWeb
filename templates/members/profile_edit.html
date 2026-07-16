@@ -14,8 +14,8 @@
         {% if is_self %}Editar perfil{% else %}Editar a {{ object.username|default:"Miembro" }}{% endif %}
       </h1>
       {# Badges de solo lectura: rol y estado (se gestionan en accounts) #}
-      <span class="role-badge {% if target_profile.role != 'member' %}admin{% endif %}">{{ target_profile.get_role_display }}</span>
-      <span class="role-badge">{{ target_profile.get_status_display }}</span>
+      <span class="role-badge {% if target_profile.is_moderator %}admin{% endif %}">{{ target_profile.role_label }}</span>
+      <span class="role-badge">{% if target_profile.is_approved %}Aprobado{% else %}Pendiente{% endif %}</span>
     </div>
 
     {% if messages %}

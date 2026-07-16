@@ -6,35 +6,36 @@ from .models import Post, Comment, Like
 
 
 @pytest.fixture
-def post(db, approved_member):
+def post(db, approved_member, default_group):
     return Post.objects.create(
         title='Post de prueba',
         content='<p>Contenido de prueba</p>',
         author=approved_member,
+        group=default_group,
     )
 
 
 @pytest.fixture
-def other_member(db):
+def other_member(default_group):
     from django.contrib.auth.models import User
+    from apps.groups.models import Membership
     user = User.objects.create_user(
         username='other@test.com',
         email='other@test.com',
         password='testpass123',
         is_active=True,
     )
-    user.profile.role = 'member'
-    user.profile.status = 'approved'
-    user.profile.save()
+    Membership.objects.create(user=user, group=default_group, status=Membership.Status.APPROVED)
     return user
 
 
 @pytest.mark.django_db
-def test_post_content_is_sanitized_on_save(approved_member):
+def test_post_content_is_sanitized_on_save(approved_member, default_group):
     post = Post.objects.create(
         title='XSS',
         content='<p>Hola</p><script>alert(1)</script><img src=x onerror="alert(2)">',
         author=approved_member,
+        group=default_group,
     )
     post.refresh_from_db()
     assert '<script>' not in post.content
@@ -43,22 +44,24 @@ def test_post_content_is_sanitized_on_save(approved_member):
 
 
 @pytest.mark.django_db
-def test_post_sanitize_strips_javascript_href(approved_member):
+def test_post_sanitize_strips_javascript_href(approved_member, default_group):
     post = Post.objects.create(
         title='Enlace peligroso',
         content='<a href="javascript:alert(1)">click</a>',
         author=approved_member,
+        group=default_group,
     )
     post.refresh_from_db()
     assert 'javascript:' not in post.content
 
 
 @pytest.mark.django_db
-def test_post_sanitize_keeps_safe_formatting(approved_member):
+def test_post_sanitize_keeps_safe_formatting(approved_member, default_group):
     post = Post.objects.create(
         title='Formato',
         content='<h2>Título</h2><p><strong>negrita</strong> y <a href="https://x.com">enlace</a></p>',
         author=approved_member,
+        group=default_group,
     )
     post.refresh_from_db()
     assert '<strong>negrita</strong>' in post.content

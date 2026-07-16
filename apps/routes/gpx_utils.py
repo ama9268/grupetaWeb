@@ -3,7 +3,17 @@ import gpxpy
 
 def parse_gpx(file_obj):
     gpx = gpxpy.parse(file_obj)
+    return extract_gpx_stats(gpx)
 
+
+def extract_gpx_stats(gpx):
+    """Extrae distancia/desnivel/trazado/perfil de un objeto `gpxpy.gpx.GPX`.
+
+    Se usa tanto para un GPX subido directamente (`parse_gpx`) como para una
+    actividad de Strava convertida a este mismo tipo de objeto
+    (`apps.routes.strava.build_gpx_from_streams`) — una única implementación de
+    la extracción de estadísticas, sin duplicar la lógica por origen del track.
+    """
     moving_data = gpx.get_moving_data()
     uphill, downhill = gpx.get_uphill_downhill()
 

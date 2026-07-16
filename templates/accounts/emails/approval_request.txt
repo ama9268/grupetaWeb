@@ -1,11 +1,11 @@
 Hola,
 
-Hay un nuevo registro pendiente de aprobación en GrupetaWeb:
+Hay una nueva solicitud pendiente de aprobación en la grupeta {{ group.name }}:
 
 Email: {{ new_user.email }}
 Fecha: {{ new_user.date_joined }}
 
-Accede al panel de gestión para aprobar o rechazar el registro:
+Accede al panel de gestión para aprobar o rechazar la solicitud:
 {{ site_url }}/accounts/manage/
 
 — GrupetaWeb

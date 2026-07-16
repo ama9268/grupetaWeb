@@ -52,8 +52,8 @@
           {{ member.user.username|default:"Miembro" }}
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
-          <span class="role-badge {% if member.role != 'member' %}admin{% endif %}">
-            {{ member.get_role_display }}
+          <span class="role-badge {% if member.is_moderator %}admin{% endif %}">
+            {{ member.role_label }}
           </span>
           {% if member.bikes %}
           <span style="font-family:var(--font-body);font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ member.bikes|truncatechars:30 }}</span>
@@ -92,7 +92,7 @@
           <span style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
             {{ member.user.username|default:"Miembro" }}
           </span>
-          <span class="role-badge {% if member.role != 'member' %}admin{% endif %}">{{ member.get_role_display }}</span>
+          <span class="role-badge {% if member.is_moderator %}admin{% endif %}">{{ member.role_label }}</span>
         </div>
         {% if member.bikes %}
         <div style="font-family:var(--font-body);font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ member.bikes|truncatechars:35 }}</div>

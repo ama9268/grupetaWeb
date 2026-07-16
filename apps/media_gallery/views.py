@@ -5,22 +5,24 @@ from django.views.generic import ListView, CreateView
 from django.urls import reverse_lazy
 
 from apps.accounts.mixins import ApprovedUserMixin
+from apps.groups.mixins import ActiveGroupMixin
+from apps.groups.permissions import user_is_group_moderator
 from .models import MediaItem
 from .forms import MediaUploadForm
 from .services import upload_media_item
 
 
-class GalleryListView(ApprovedUserMixin, ListView):
+class GalleryListView(ApprovedUserMixin, ActiveGroupMixin, ListView):
     model = MediaItem
     template_name = 'media_gallery/gallery_list.html'
     context_object_name = 'items'
     paginate_by = 24
 
     def get_queryset(self):
-        return MediaItem.objects.select_related('uploaded_by').all()
+        return MediaItem.objects.filter(group=self.active_group).select_related('uploaded_by')
 
 
-class MediaUploadView(ApprovedUserMixin, CreateView):
+class MediaUploadView(ApprovedUserMixin, ActiveGroupMixin, CreateView):
     template_name = 'media_gallery/media_upload.html'
     form_class = MediaUploadForm
     success_url = reverse_lazy('media_gallery:list')
@@ -38,6 +40,7 @@ class MediaUploadView(ApprovedUserMixin, CreateView):
                 user=request.user,
                 media_type=form.cleaned_data['media_type'],
                 file=form.cleaned_data['file'],
+                group=self.active_group,
                 title=form.cleaned_data.get('title', ''),
             )
         except Exception as e:
@@ -52,7 +55,7 @@ def delete_media(request, item_id):
     if request.method != 'POST':
         return redirect('media_gallery:list')
     item = get_object_or_404(MediaItem, pk=item_id)
-    if item.uploaded_by != request.user and request.user.profile.role not in ('admin', 'moderator'):
+    if item.uploaded_by != request.user and not user_is_group_moderator(request.user, item.group):
         raise PermissionDenied
     item.delete()
     messages.success(request, 'Archivo eliminado.')

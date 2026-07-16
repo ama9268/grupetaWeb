@@ -16,14 +16,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        # Coherente con ApprovedUserMixin de las vistas HTTP: solo usuarios aprobados.
-        if not await self.is_approved():
-            await self.close()
-            return
-
         self.slug = self.scope['url_route']['kwargs']['slug']
         self.room = await self.get_room(self.slug)
         if self.room is None:
+            await self.close()
+            return
+
+        # Coherente con ApprovedUserMixin de las vistas HTTP, pero acotado a la
+        # grupeta de ESTA sala (no basta con estar aprobado en cualquier otra).
+        if not await self.is_group_member():
             await self.close()
             return
 
@@ -86,13 +87,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({'type': 'deleted', 'id': event['id']}))
 
     @database_sync_to_async
-    def is_approved(self):
+    def is_group_member(self):
         user = self.scope['user']
-        return hasattr(user, 'profile') and user.profile.status == 'approved'
+        profile = getattr(user, 'profile', None)
+        return bool(profile) and profile.is_member_of(self.room.group)
 
     @database_sync_to_async
     def get_room(self, slug):
-        return ChatRoom.objects.filter(slug=slug).first()
+        return ChatRoom.objects.select_related('group').filter(slug=slug).first()
 
     @database_sync_to_async
     def is_room_archived(self):

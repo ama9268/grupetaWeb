@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Strava · Rutas{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px;">
+  <div>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:28px;letter-spacing:-.5px;color:var(--text);">Importar desde Strava</h1>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">Revisa tus actividades recientes y publícalas como rutas</p>
+  </div>
+  <a href="{% url 'routes:list' %}" class="btn-secondary">← Rutas</a>
+</div>
+
+{% if not strava_account %}
+<div class="card" style="text-align:center;padding:40px 20px;">
+  <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-bottom:16px;">
+    Todavía no has conectado tu cuenta de Strava.
+  </p>
+  <a href="{% url 'routes:strava_connect' %}" class="btn-primary">Conectar con Strava</a>
+</div>
+{% else %}
+
+<div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+  <span style="font-family:var(--font-body);font-size:13px;color:var(--dim);">
+    Cuenta de Strava conectada (atleta #{{ strava_account.strava_athlete_id }})
+  </span>
+  <form method="post" action="{% url 'routes:strava_sync' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn-secondary">Sincronizar actividades</button>
+  </form>
+</div>
+
+{% if candidates %}
+<div style="display:flex;flex-direction:column;gap:12px;">
+  {% for candidate in candidates %}
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+    <div>
+      <div style="font-family:var(--font-title);font-weight:800;font-size:16px;color:var(--text);">{{ candidate.name }}</div>
+      <div style="font-family:var(--font-body);font-size:13px;color:var(--dim);margin-top:2px;">
+        {{ candidate.distance_km }} km
+        {% if candidate.elevation_gain_m %} · +{{ candidate.elevation_gain_m }} m{% endif %}
+        · {{ candidate.started_at|date:"d/m/Y" }}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <form method="post" action="{% url 'routes:strava_import' candidate.pk %}" style="display:flex;gap:8px;align-items:center;">
+        {% csrf_token %}
+        <select name="group" class="select" required>
+          {% for group in moderated_groups %}
+          <option value="{{ group.pk }}">{{ group.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn-primary">Importar</button>
+      </form>
+      <form method="post" action="{% url 'routes:strava_discard' candidate.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-secondary">Descartar</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state card">
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="1.5"
+       stroke-linecap="round" stroke-linejoin="round"
+       style="margin:0 auto 10px;color:var(--dim);">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+  <p>No hay actividades pendientes de revisar. Pulsa «Sincronizar» para traer las últimas de Strava.</p>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

@@ -7,61 +7,67 @@
     Moderación
   </h1>
   <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">
-    Gestiona registros pendientes y roles de la grupeta
+    Gestiona solicitudes pendientes y roles de tus grupetas
   </p>
 </div>
 
-<div class="mod-layout">
+{% for section in sections %}
+<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+  <h2 style="font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--text);">{{ section.group.name }}</h2>
+  <span class="chip">{{ section.group.slug }}</span>
+</div>
 
-  {# ===== Columna izquierda: Registros pendientes ===== #}
+<div class="mod-layout" style="margin-bottom:32px;">
+
+  {# ===== Columna izquierda: Solicitudes pendientes ===== #}
   <div class="mod-col">
-    <h2 class="mod-col-title">Registros pendientes</h2>
+    <h2 class="mod-col-title">Solicitudes pendientes</h2>
 
-    <div id="lista-pendientes">
-      {% for pending_user in pending_users %}
-      <div class="tarjeta-registro" id="registro-{{ pending_user.pk }}">
+    <div id="lista-pendientes-{{ section.group.pk }}">
+      {% for membership in section.pending %}
+      <div class="tarjeta-registro" id="registro-{{ membership.pk }}">
         <div class="tarjeta-registro-header">
           {# Avatar con inicial #}
           <div class="avatar av-40">
-            {{ pending_user.username|slice:":1"|upper|default:'M' }}
+            {{ membership.user.username|slice:":1"|upper|default:'M' }}
           </div>
           <div class="tarjeta-registro-info">
             <div class="tarjeta-registro-name">
-              {{ pending_user.username|default:"Miembro" }}
+              {{ membership.user.username|default:"Miembro" }}
             </div>
-            <div class="tarjeta-registro-email">{{ pending_user.email }}</div>
+            <div class="tarjeta-registro-email">{{ membership.user.email }}</div>
           </div>
           <div class="tarjeta-registro-time">
-            hace {{ pending_user.date_joined|timesince }}
+            hace {{ membership.created_at|timesince }}
           </div>
         </div>
 
         <div class="tarjeta-registro-actions">
           <form method="post"
-                action="{% url 'accounts:approve_user' pending_user.pk %}"
+                action="{% url 'accounts:approve_user' membership.pk %}"
                 style="flex:1;">
             {% csrf_token %}
             <button type="submit"
                     class="btn-aprobar"
                     style="width:100%;"
-                    hx-post="{% url 'accounts:approve_user' pending_user.pk %}"
-                    hx-target="#registro-{{ pending_user.pk }}"
+                    hx-post="{% url 'accounts:approve_user' membership.pk %}"
+                    hx-target="#registro-{{ membership.pk }}"
                     hx-swap="outerHTML"
-                    hx-confirm="¿Aprobar a {{ pending_user.username }}?">
+                    hx-confirm="¿Aprobar a {{ membership.user.username }} en {{ section.group.name }}?">
               Aprobar
             </button>
           </form>
           <form method="post"
-                action="{% url 'accounts:reject_user' pending_user.pk %}"
+                action="{% url 'accounts:reject_user' membership.pk %}"
                 style="flex:1;">
             {% csrf_token %}
             <button type="submit"
                     class="btn-rechazar"
                     style="width:100%;"
-                    hx-post="{% url 'accounts:reject_user' pending_user.pk %}"
-                    hx-target="#registro-{{ pending_user.pk }}"
+                    hx-post="{% url 'accounts:reject_user' membership.pk %}"
+                    hx-target="#registro-{{ membership.pk }}"
                     hx-swap="outerHTML"
-                    hx-confirm="¿Rechazar a {{ pending_user.username }}?">
+                    hx-confirm="¿Rechazar a {{ membership.user.username }} en {{ section.group.name }}?">
               Rechazar
             </button>
           </form>
@@ -75,7 +81,7 @@
              style="margin:0 auto 10px;color:var(--dim);">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
-        <p>No hay registros pendientes de aprobación.</p>
+        <p>No hay solicitudes pendientes en esta grupeta.</p>
       </div>
       {% endfor %}
     </div>
@@ -85,52 +91,47 @@
   <div class="mod-col">
     <h2 class="mod-col-title">Gestión de roles</h2>
 
-    {% if approved_members %}
+    {% if section.approved %}
     <div class="roles-card">
-      {% for member in approved_members %}
+      {% for membership in section.approved %}
       <div class="roles-row">
         {# Avatar #}
         <div class="avatar av-32">
-          {% if member.profile.photo %}
-            <img src="{{ member.profile.photo.url }}" alt="{{ member.username|default:'Miembro' }}">
+          {% if membership.user.profile.photo %}
+            <img src="{{ membership.user.profile.photo.url }}" alt="{{ membership.user.username|default:'Miembro' }}">
           {% else %}
-            {{ member.username|slice:":1"|upper|default:'M' }}
+            {{ membership.user.username|slice:":1"|upper|default:'M' }}
           {% endif %}
         </div>
 
         {# Info #}
         <div class="roles-row-info">
           <div class="roles-row-name">
-            {{ member.username|default:"Miembro" }}
+            {{ membership.user.username|default:"Miembro" }}
+            {% if membership.user.profile.is_admin %}<span class="chip">Admin</span>{% endif %}
           </div>
-          <div class="roles-row-email">{{ member.email }}</div>
+          <div class="roles-row-email">{{ membership.user.email }}</div>
         </div>
 
-        {# Selector de rol. Solo un admin puede otorgar/modificar el rol 'admin'. #}
-        {% if not request.user.profile.is_admin and member.profile.role == 'admin' %}
+        {# Selector de rol EN ESTA GRUPETA (Admin global no se gestiona aquí). #}
+        {% if membership.user.profile.is_admin %}
         <span style="min-width:120px;text-align:center;display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);font-family:var(--font-body);font-weight:700;font-size:13px;color:var(--dim);">Admin</span>
         {% else %}
         <select class="select"
                 style="width:auto;min-width:120px;"
                 name="role"
-                hx-post="{% url 'accounts:change_role' member.pk %}"
+                hx-post="{% url 'accounts:change_role' membership.pk %}"
                 hx-trigger="change"
                 hx-swap="none"
-                aria-label="Rol de {{ member.username }}">
+                aria-label="Rol de {{ membership.user.username }} en {{ section.group.name }}">
           <option value="member"
-                  {% if member.profile.role == 'member' %}selected{% endif %}>
+                  {% if membership.role == 'member' %}selected{% endif %}>
             Miembro
           </option>
           <option value="moderator"
-                  {% if member.profile.role == 'moderator' %}selected{% endif %}>
+                  {% if membership.role == 'moderator' %}selected{% endif %}>
             Moderador
           </option>
-          {% if request.user.profile.is_admin %}
-          <option value="admin"
-                  {% if member.profile.role == 'admin' %}selected{% endif %}>
-            Admin
-          </option>
-          {% endif %}
         </select>
         {% endif %}
       </div>
@@ -138,10 +139,15 @@
     </div>
     {% else %}
     <div class="empty-state card">
-      <p>Aún no hay miembros aprobados.</p>
+      <p>Aún no hay miembros aprobados en esta grupeta.</p>
     </div>
     {% endif %}
   </div>
 
 </div>
+{% empty %}
+<div class="empty-state card">
+  <p>No moderas ninguna grupeta todavía.</p>
+</div>
+{% endfor %}
 {% endblock %}

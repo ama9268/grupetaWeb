@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}{{ group.name }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'groups:list' %}"
+   style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
+  ← Grupetas
+</a>
+
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap;">
+  {% if group.logo %}
+  <img src="{{ group.logo.url }}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:1px solid var(--border);">
+  {% else %}
+  <div class="avatar" style="width:64px;height:64px;font-size:24px;">{{ group.name|slice:":1"|upper }}</div>
+  {% endif %}
+  <div>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:26px;color:var(--text);">{{ group.name }}</h1>
+    <p style="font-family:var(--font-body);font-size:13px;color:var(--dim);">{{ members_count }} miembro{{ members_count|pluralize:"s" }}</p>
+  </div>
+</div>
+
+{% if group.description %}
+<p style="font-family:var(--font-body);font-size:14px;color:var(--text);margin-bottom:20px;line-height:1.55;">{{ group.description }}</p>
+{% endif %}
+
+{% if membership %}
+<span class="chip">
+  {% if membership.status == 'approved' %}Ya eres {{ membership.get_role_display|lower }}{% else %}{{ membership.get_status_display }}{% endif %}
+</span>
+{% else %}
+<form method="post" action="{% url 'groups:request_join' group.slug %}" style="margin-bottom:20px;">
+  {% csrf_token %}
+  <button type="submit" class="btn-primary">Solicitar unirme</button>
+</form>
+{% endif %}
+
+<h2 style="font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--text);margin:22px 0 10px;">Moderadores</h2>
+<div style="display:flex;flex-direction:column;gap:8px;">
+  {% for mod in moderators %}
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);">
+    <div class="avatar av-32">{{ mod.user.username|slice:":1"|upper }}</div>
+    <span style="font-family:var(--font-body);font-weight:600;font-size:14px;color:var(--text);">{{ mod.user.username }}</span>
+  </div>
+  {% empty %}
+  <div class="empty-state">Sin moderadores todavía.</div>
+  {% endfor %}
+</div>
+{% endblock %}

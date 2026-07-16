@@ -14,6 +14,7 @@ def create_event_chat_room(sender, instance, created, **kwargs):
         name=instance.title,
         slug=f'evento-{instance.pk}',
         category=ChatRoom.Category.EVENTOS,
+        group=instance.group,
     )
     instance.chat_room = room
     instance.save(update_fields=['chat_room'])

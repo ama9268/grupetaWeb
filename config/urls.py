@@ -8,6 +8,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('accounts/', include('apps.accounts.urls')),
     path('', include('apps.dashboard.urls')),
+    path('grupos/', include('apps.groups.urls')),
     path('members/', include('apps.members.urls')),
     path('routes/', include('apps.routes.urls')),
     path('events/', include('apps.events.urls')),

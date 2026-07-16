@@ -25,12 +25,13 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('title', 'description', 'event_type', 'start_at', 'location', 'associated_route')
+        fields = ('group', 'title', 'description', 'event_type', 'start_at', 'location', 'associated_route')
         widgets = {
             'start_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
             'description': forms.Textarea(attrs={'rows': 4}),
         }
         labels = {
+            'group': 'Grupeta',
             'title': 'Título del evento',
             'description': 'Descripción',
             'event_type': 'Tipo de evento',
@@ -39,10 +40,19 @@ class EventForm(forms.ModelForm):
             'associated_route': 'Ruta asociada',
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, initial_group=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['start_at'].input_formats = ['%Y-%m-%dT%H:%M']
         self.fields['associated_route'].required = False
+
+        if self.instance and self.instance.pk:
+            # La grupeta de un evento ya creado no se cambia (chat/álbum/RSVP
+            # ya están ligados a ella): se muestra de solo lectura.
+            self.fields['group'].disabled = True
+        elif user is not None:
+            self.fields['group'].queryset = user.profile.moderated_groups().order_by('name')
+            if initial_group is not None:
+                self.initial.setdefault('group', initial_group.pk)
         if self.instance and self.instance.pk and self.instance.start_at:
             self.initial['start_at'] = self.instance.start_at.strftime('%Y-%m-%dT%H:%M')
         # Modo inicial: si el evento ya tiene ruta asociada, arrancar en "existente".

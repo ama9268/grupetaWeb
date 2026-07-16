@@ -1,10 +1,16 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from apps.groups.querysets import GroupScopedQuerySet
 from .sanitize import sanitize_html
 
 
 class Post(models.Model):
+    objects = GroupScopedQuerySet.as_manager()
+
+    group = models.ForeignKey(
+        'groups.Group', on_delete=models.PROTECT, related_name='posts'
+    )
     title = models.CharField(max_length=200)
     content = models.TextField()
     header_image = models.ImageField(upload_to='blog/', blank=True, null=True)
@@ -14,7 +20,10 @@ class Post(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['-created_at'])]
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['group', '-created_at'], name='blog_post_group_created_idx'),
+        ]
 
     def save(self, *args, **kwargs):
         # El contenido se muestra con |safe: sanear el HTML antes de persistirlo (anti-XSS).

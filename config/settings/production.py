@@ -5,6 +5,8 @@ DEBUG = False
 DATABASES = {
     'default': env.db('DATABASE_URL')
 }
+# Backend con soporte GeoDjango/PostGIS (apps.routes usa LineStringField/PointField).
+DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
 
 ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS')
 

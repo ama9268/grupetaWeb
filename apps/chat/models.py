@@ -1,12 +1,19 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from apps.groups.querysets import GroupScopedQuerySet
+
 
 class ChatRoom(models.Model):
     class Category(models.TextChoices):
         GENERAL = 'general', 'General'
         EVENTOS = 'eventos', 'Eventos'
 
+    objects = GroupScopedQuerySet.as_manager()
+
+    group = models.ForeignKey(
+        'groups.Group', on_delete=models.PROTECT, related_name='chat_rooms'
+    )
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True)
     category = models.CharField(
@@ -17,6 +24,9 @@ class ChatRoom(models.Model):
 
     class Meta:
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['group', 'category'], name='chat_room_group_category_idx'),
+        ]
 
     def __str__(self):
         return self.name

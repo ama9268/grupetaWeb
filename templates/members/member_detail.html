@@ -44,7 +44,7 @@
     <h1 style="font-family:var(--font-title);font-weight:800;font-size:26px;letter-spacing:-.4px;color:var(--text);">
       {{ member_profile.user.username|default:"Miembro" }}
     </h1>
-    <span class="role-badge {% if member_profile.role != 'member' %}admin{% endif %}">{{ member_profile.get_role_display }}</span>
+    <span class="role-badge {% if member_profile.is_moderator %}admin{% endif %}">{{ member_profile.role_label }}</span>
   </div>
   <p style="font-family:var(--font-body);font-size:13px;color:var(--dim);">
     Miembro desde {{ member_profile.user.date_joined|date:"Y" }}

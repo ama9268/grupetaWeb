@@ -4,8 +4,14 @@ from django.core.management import call_command
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.groups.constants import DEFAULT_GROUP_SLUG
+from apps.groups.models import Group
 from apps.media_gallery.models import Album
 from .models import Event, EventRSVP
+
+
+def _default_group():
+    return Group.objects.get(slug=DEFAULT_GROUP_SLUG)
 
 
 @pytest.fixture
@@ -14,7 +20,7 @@ def future_event(db, approved_moderator):
         title='Evento test',
         event_type=Event.EventType.RUTA_ESPECIAL,
         start_at=timezone.now() + timedelta(days=7),
-        created_by=approved_moderator,
+        created_by=approved_moderator, group=_default_group(),
     )
 
 
@@ -85,6 +91,7 @@ def test_member_cannot_create_event(member_client):
 @pytest.mark.django_db
 def test_moderator_can_create_event(moderator_client):
     response = moderator_client.post(reverse('events:create'), {
+        'group': _default_group().pk,
         'title': 'Salida al puerto',
         'event_type': 'ruta_especial',
         'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
@@ -126,7 +133,7 @@ def test_event_update_deletes_old_image(moderator_client, approved_moderator):
     from django.core.files.uploadedfile import SimpleUploadedFile
     event = Event.objects.create(
         title='Con imagen', start_at=timezone.now() + timedelta(days=3),
-        created_by=approved_moderator, image_public_id='old_id', image_url='http://old',
+        created_by=approved_moderator, group=_default_group(), image_public_id='old_id', image_url='http://old',
     )
     png = SimpleUploadedFile('f.png', b'\x89PNG\r\n\x1a\n' + b'\x00' * 253, content_type='image/png')
     with patch('apps.events.views.upload_image', return_value=('new_id', 'http://new')), \
@@ -147,7 +154,7 @@ def test_event_update_without_new_image_keeps_old(moderator_client, approved_mod
     from unittest.mock import patch
     event = Event.objects.create(
         title='Sin cambio de imagen', start_at=timezone.now() + timedelta(days=3),
-        created_by=approved_moderator, image_public_id='keep_id', image_url='http://keep',
+        created_by=approved_moderator, group=_default_group(), image_public_id='keep_id', image_url='http://keep',
     )
     with patch('apps.events.views.delete_asset') as mock_delete:
         moderator_client.post(reverse('events:edit', args=[event.pk]), {
@@ -180,11 +187,11 @@ def test_cancel_archives_event(moderator_client, future_event):
 def test_update_event_states_command(db, approved_moderator):
     past = timezone.now() - timedelta(days=1)
     pendiente = Event.objects.create(
-        title='Pasado pendiente', start_at=past, created_by=approved_moderator,
+        title='Pasado pendiente', start_at=past, created_by=approved_moderator, group=_default_group(),
         state=Event.State.PENDIENTE,
     )
     aceptado = Event.objects.create(
-        title='Pasado aceptado', start_at=past, created_by=approved_moderator,
+        title='Pasado aceptado', start_at=past, created_by=approved_moderator, group=_default_group(),
         state=Event.State.ACEPTADO,
     )
     call_command('update_event_states')
@@ -199,9 +206,9 @@ def test_update_event_states_command(db, approved_moderator):
 @pytest.mark.django_db
 def test_list_default_filter_shows_only_active(moderator_client, approved_moderator):
     Event.objects.create(title='PendVisibleXYZ', start_at=timezone.now() + timedelta(days=1),
-                         created_by=approved_moderator, state=Event.State.PENDIENTE)
+                         created_by=approved_moderator, group=_default_group(), state=Event.State.PENDIENTE)
     Event.objects.create(title='CancelHiddenXYZ', start_at=timezone.now() + timedelta(days=1),
-                         created_by=approved_moderator, state=Event.State.CANCELADO)
+                         created_by=approved_moderator, group=_default_group(), state=Event.State.CANCELADO)
     response = moderator_client.get(reverse('events:list'))
     assert b'PendVisibleXYZ' in response.content
     assert b'CancelHiddenXYZ' not in response.content
@@ -210,7 +217,7 @@ def test_list_default_filter_shows_only_active(moderator_client, approved_modera
 @pytest.mark.django_db
 def test_list_filter_by_state(moderator_client, approved_moderator):
     Event.objects.create(title='CanceladoUnoXYZ', start_at=timezone.now() + timedelta(days=1),
-                         created_by=approved_moderator, state=Event.State.CANCELADO)
+                         created_by=approved_moderator, group=_default_group(), state=Event.State.CANCELADO)
     response = moderator_client.get(reverse('events:list'), {'estado': 'cancelado'})
     assert b'CanceladoUnoXYZ' in response.content
 
@@ -257,12 +264,12 @@ def test_detail_renders(member_client, future_event):
 def test_detail_renders_with_route(member_client, approved_moderator):
     from apps.routes.models import Route
     route = Route.objects.create(
-        title='Ruta del puerto', author=approved_moderator,
+        group=_default_group(), title='Ruta del puerto', author=approved_moderator,
         track_geojson=[[40.4, -3.7], [40.5, -3.6]],
     )
     event = Event.objects.create(
         title='Con ruta', start_at=timezone.now() + timedelta(days=2),
-        created_by=approved_moderator, associated_route=route,
+        created_by=approved_moderator, group=_default_group(), associated_route=route,
     )
     response = member_client.get(reverse('events:detail', args=[event.pk]))
     assert response.status_code == 200
@@ -300,6 +307,7 @@ def _gpx_upload(name='ruta.gpx'):
 def test_create_event_with_new_gpx_creates_and_links_route(moderator_client, approved_moderator):
     from apps.routes.models import Route
     response = moderator_client.post(reverse('events:create'), {
+        'group': _default_group().pk,
         'title': 'Marcha con GPX',
         'event_type': 'ruta_especial',
         'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
@@ -324,9 +332,10 @@ def test_create_event_with_new_gpx_creates_and_links_route(moderator_client, app
 @pytest.mark.django_db
 def test_create_event_with_existing_route_does_not_create_route(moderator_client, approved_moderator):
     from apps.routes.models import Route
-    route = Route.objects.create(title='Ruta ya existente', author=approved_moderator)
+    route = Route.objects.create(group=_default_group(), title='Ruta ya existente', author=approved_moderator)
     before = Route.objects.count()
     response = moderator_client.post(reverse('events:create'), {
+        'group': _default_group().pk,
         'title': 'Evento con ruta existente',
         'event_type': 'ruta_especial',
         'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
@@ -344,6 +353,7 @@ def test_create_event_with_existing_route_does_not_create_route(moderator_client
 @pytest.mark.django_db
 def test_create_event_mode_none_has_no_route(moderator_client):
     response = moderator_client.post(reverse('events:create'), {
+        'group': _default_group().pk,
         'title': 'Evento sin ruta',
         'event_type': 'otro',
         'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
@@ -362,6 +372,7 @@ def test_create_event_new_mode_invalid_gpx_creates_nothing(moderator_client):
     from apps.routes.models import Route
     bad = SimpleUploadedFile('trampa.gpx', b'esto no es un gpx', content_type='application/gpx+xml')
     response = moderator_client.post(reverse('events:create'), {
+        'group': _default_group().pk,
         'title': 'Evento GPX malo',
         'event_type': 'otro',
         'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
@@ -378,10 +389,10 @@ def test_create_event_new_mode_invalid_gpx_creates_nothing(moderator_client):
 @pytest.mark.django_db
 def test_edit_event_switch_existing_to_new_gpx_replaces_route(moderator_client, approved_moderator):
     from apps.routes.models import Route
-    old = Route.objects.create(title='Ruta vieja', author=approved_moderator)
+    old = Route.objects.create(group=_default_group(), title='Ruta vieja', author=approved_moderator)
     event = Event.objects.create(
         title='Evento editable', start_at=timezone.now() + timedelta(days=4),
-        created_by=approved_moderator, associated_route=old,
+        created_by=approved_moderator, group=_default_group(), associated_route=old,
     )
     response = moderator_client.post(reverse('events:edit', args=[event.pk]), {
         'title': 'Evento editable',
@@ -403,10 +414,10 @@ def test_edit_event_switch_existing_to_new_gpx_replaces_route(moderator_client, 
 @pytest.mark.django_db
 def test_edit_event_mode_none_clears_route(moderator_client, approved_moderator):
     from apps.routes.models import Route
-    route = Route.objects.create(title='Ruta a soltar', author=approved_moderator)
+    route = Route.objects.create(group=_default_group(), title='Ruta a soltar', author=approved_moderator)
     event = Event.objects.create(
         title='Evento a limpiar', start_at=timezone.now() + timedelta(days=4),
-        created_by=approved_moderator, associated_route=route,
+        created_by=approved_moderator, group=_default_group(), associated_route=route,
     )
     response = moderator_client.post(reverse('events:edit', args=[event.pk]), {
         'title': 'Evento a limpiar',

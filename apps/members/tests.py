@@ -29,9 +29,9 @@ def test_member_edits_own_profile(member_client, approved_member):
     assert approved_member.username == 'rodador'
     assert approved_member.first_name == 'Ana'
     assert approved_member.profile.bio == 'Hola'
-    # role/status intactos
-    assert approved_member.profile.role == 'member'
-    assert approved_member.profile.status == 'approved'
+    # rol/estado de membership intactos
+    assert not approved_member.profile.is_moderator
+    assert approved_member.profile.is_approved
 
 
 @pytest.mark.django_db
@@ -42,7 +42,8 @@ def test_role_and_status_not_editable_from_profile_form(member_client, approved_
         _profile_post(role='admin', status='approved'),
     )
     approved_member.refresh_from_db()
-    assert approved_member.profile.role == 'member'
+    assert not approved_member.profile.is_admin
+    assert not approved_member.profile.is_moderator
 
 
 @pytest.mark.django_db

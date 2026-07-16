@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Crear grupeta{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;margin:0 auto;">
+  <a href="{% url 'groups:list' %}"
+     style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
+    ← Grupetas
+  </a>
+
+  <div class="card" style="border-radius:var(--radius-xl);padding:24px;">
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;color:var(--text);margin-bottom:16px;">Crear grupeta</h1>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="form-non-field-errors" role="alert">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.name.auto_id }}">{{ form.name.label }}</label>
+        {{ form.name }}
+        {% if form.name.errors %}<p class="form-error">{{ form.name.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.description.auto_id }}">{{ form.description.label }}</label>
+        {{ form.description }}
+        {% if form.description.errors %}<p class="form-error">{{ form.description.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ form.logo.label }}</label>
+        <input type="file" name="{{ form.logo.html_name }}" id="{{ form.logo.auto_id }}"
+               accept="image/*" style="font-family:var(--font-body);font-size:13px;color:var(--text);">
+        {% if form.logo.errors %}<p class="form-error">{{ form.logo.errors.0 }}</p>{% endif %}
+      </div>
+
+      <p style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-bottom:14px;">
+        Al crearla, serás automáticamente su moderador.
+      </p>
+
+      <button type="submit" class="btn-primary" style="width:100%;">Crear grupeta</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

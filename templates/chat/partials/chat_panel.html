@@ -29,7 +29,15 @@
     Sala archivada · solo lectura
   </div>
   {% else %}
-  <div style="border-top:1px solid var(--border);padding:13px 16px;flex-shrink:0;display:flex;align-items:center;gap:10px;">
+  <div style="position:relative;border-top:1px solid var(--border);padding:13px 16px;flex-shrink:0;display:flex;align-items:center;gap:8px;">
+    {# Panel de emojis (se rellena por JS). Se posiciona sobre el input. #}
+    <div id="emoji-panel" role="menu" aria-label="Emojis"
+         style="display:none;position:absolute;bottom:62px;left:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:8px;max-height:172px;overflow-y:auto;z-index:30;">
+      <div id="emoji-grid" style="display:flex;flex-wrap:wrap;gap:2px;"></div>
+    </div>
+    <button id="chat-emoji" type="button" aria-label="Emojis"
+            style="width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--bg);color:var(--dim);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .15s ease;"
+            onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">😊</button>
     <button id="chat-attach" type="button" aria-label="Adjuntar imagen o vídeo"
             style="width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--bg);color:var(--dim);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .15s ease;"
             onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">📎</button>
@@ -249,6 +257,59 @@
   if (attachBtn && fileInput) {
     attachBtn.addEventListener('click', function () { fileInput.click(); });
     fileInput.addEventListener('change', function () { uploadFile(fileInput.files[0]); });
+  }
+
+  // --- Selector de emojis (sin librerías) ---
+  var EMOJIS = [
+    '😀','😁','😂','🤣','😊','😍','😘','😎','🤩','😅','😆','🙂','😉','😇','🥳','😜',
+    '🤔','🤨','😐','😶','🙄','😏','😴','😌','😔','😞','😢','😭','😤','😡','🤯','😱',
+    '👍','👎','👏','🙌','🙏','💪','🤝','✌️','🤙','👌','🫡','🖐️','👋','🤟','☝️','✊',
+    '❤️','🧡','💛','💚','💙','💜','🖤','🔥','✨','⭐','🎉','🎊','💯','✅','❌','⚠️',
+    '🚴','🚵','🚲','🏔️','⛰️','🌄','🌅','☀️','🌧️','❄️','🌈','🏁','🏆','🥇','⏱️','📍',
+    '🍺','🍻','☕','🥤','🍫','🍕','🌮','😋','🤤','💦','😮‍💨','🥵','🥶','😬','🫠','🫶',
+  ];
+
+  var emojiBtn = document.getElementById('chat-emoji');
+  var emojiPanel = document.getElementById('emoji-panel');
+  var emojiGrid = document.getElementById('emoji-grid');
+
+  function insertAtCursor(text) {
+    if (!input) return;
+    var start = input.selectionStart, end = input.selectionEnd;
+    if (typeof start === 'number' && typeof end === 'number') {
+      input.value = input.value.slice(0, start) + text + input.value.slice(end);
+      var pos = start + text.length;
+      input.setSelectionRange(pos, pos);
+    } else {
+      input.value += text;
+    }
+    input.focus();
+  }
+
+  if (emojiBtn && emojiPanel && emojiGrid) {
+    EMOJIS.forEach(function (e) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = e;
+      b.setAttribute('role', 'menuitem');
+      b.style.cssText = 'width:34px;height:34px;border:none;background:none;cursor:pointer;font-size:20px;border-radius:8px;line-height:1;';
+      b.onmouseenter = function () { b.style.background = 'var(--surface2)'; };
+      b.onmouseleave = function () { b.style.background = 'none'; };
+      b.addEventListener('click', function () { insertAtCursor(e); });
+      emojiGrid.appendChild(b);
+    });
+
+    emojiBtn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      emojiPanel.style.display = emojiPanel.style.display === 'none' ? 'block' : 'none';
+    });
+    // Cerrar al pulsar fuera del panel/botón.
+    document.addEventListener('click', function (ev) {
+      if (emojiPanel.style.display !== 'none' &&
+          !emojiPanel.contains(ev.target) && ev.target !== emojiBtn) {
+        emojiPanel.style.display = 'none';
+      }
+    });
   }
 })();
 </script>

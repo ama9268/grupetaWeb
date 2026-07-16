@@ -5,6 +5,8 @@ django-storages[cloudinary]
 cloudinary
 django-cloudinary-storage
 gpxpy
+stravalib
+cryptography
 pillow
 psycopg2-binary
 channels

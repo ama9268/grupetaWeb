@@ -9,7 +9,12 @@
     <h1 style="font-family:var(--font-title);font-weight:800;font-size:30px;letter-spacing:-.6px;color:var(--text);">Rutas</h1>
     <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">Trazados publicados por la peña</p>
   </div>
-  <a href="{% url 'routes:create' %}" class="btn-primary">+ Subir GPX</a>
+  {% if request.user.profile.is_moderator %}
+  <div style="display:flex;gap:10px;">
+    <a href="{% url 'routes:strava_staging' %}" class="btn-secondary">Strava</a>
+    <a href="{% url 'routes:create' %}" class="btn-primary">+ Subir GPX</a>
+  </div>
+  {% endif %}
 </div>
 
 {# Grid de tarjetas #}
@@ -80,8 +85,10 @@
   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);margin:0 auto 16px;">
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
   </svg>
-  <p style="font-family:var(--font-body);font-size:15px;color:var(--dim);margin-bottom:16px;">No hay rutas todavía. ¡Sube la primera!</p>
+  <p style="font-family:var(--font-body);font-size:15px;color:var(--dim);margin-bottom:16px;">No hay rutas todavía.{% if request.user.profile.is_moderator %} ¡Sube la primera!{% endif %}</p>
+  {% if request.user.profile.is_moderator %}
   <a href="{% url 'routes:create' %}" class="btn-primary">+ Subir GPX</a>
+  {% endif %}
 </div>
 {% endif %}
 

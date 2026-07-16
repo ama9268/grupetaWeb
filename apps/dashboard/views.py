@@ -3,10 +3,10 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 
 from apps.accounts.mixins import ApprovedUserMixin
-from apps.accounts.models import UserProfile
 from apps.events.models import Event, EventRSVP
 from apps.media_gallery.models import MediaItem
 from apps.blog.models import Post
+from apps.members.services import members_visible_to
 from apps.routes.models import Route
 
 
@@ -16,10 +16,14 @@ class DashboardView(ApprovedUserMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         now = timezone.now()
+        user = self.request.user
 
-        upcoming = Event.objects.filter(
+        # Vista COMBINADA: contenido de TODAS las grupetas del usuario a la
+        # vez (a diferencia de eventos/chat/miembros/blog/galería, que se
+        # navegan por una "grupeta activa"). Ver GroupScopedQuerySet.for_user().
+        upcoming = Event.objects.for_user(user).filter(
             start_at__gte=now, state__in=Event.DEFAULT_LIST_STATES
-        ).select_related('created_by', 'associated_route').order_by('start_at')
+        ).select_related('created_by', 'associated_route', 'group').order_by('start_at')
 
         next_event = upcoming.first()
         ctx['next_event'] = next_event
@@ -33,15 +37,15 @@ class DashboardView(ApprovedUserMixin, TemplateView):
             if next_event else []
         )
         ctx['upcoming_events'] = upcoming[1:4]
-        ctx['recent_media'] = MediaItem.objects.filter(
+        ctx['recent_media'] = MediaItem.objects.for_user(user).filter(
             media_type='image'
-        ).select_related('uploaded_by').order_by('-created_at')[:8]
-        ctx['recent_posts'] = Post.objects.select_related('author').order_by('-created_at')[:4]
-        ctx['top_members'] = UserProfile.objects.filter(
-            status='approved'
-        ).select_related('user').order_by('-total_km')[:3]
+        ).select_related('uploaded_by', 'group').order_by('-created_at')[:8]
+        ctx['recent_posts'] = Post.objects.for_user(user).select_related(
+            'author', 'group'
+        ).order_by('-created_at')[:4]
+        ctx['top_members'] = members_visible_to(user).select_related('user').order_by('-total_km')[:3]
 
-        agg = Route.objects.aggregate(
+        agg = Route.objects.for_user(user).aggregate(
             total_km=Sum('distance_km'),
             total_elevation=Sum('elevation_gain_m'),
             total_routes=Count('pk'),
@@ -50,9 +54,8 @@ class DashboardView(ApprovedUserMixin, TemplateView):
             'km': int(agg['total_km'] or 0),
             'elevation': int(agg['total_elevation'] or 0),
             'routes': agg['total_routes'],
-            'members': UserProfile.objects.filter(status='approved').count(),
+            'members': members_visible_to(user).count(),
         }
 
-        user = self.request.user
         ctx['display_name'] = user.first_name or user.username or 'ciclista'
         return ctx
