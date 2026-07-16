@@ -148,3 +148,22 @@ STRAVA_CLIENT_SECRET = env('STRAVA_CLIENT_SECRET', default='')
 STRAVA_REDIRECT_URI = env('STRAVA_REDIRECT_URI', default='http://127.0.0.1:8000/routes/strava/callback/')
 STRAVA_ENCRYPTION_KEY = env('STRAVA_ENCRYPTION_KEY', default='')
 
+# Agente de recomendación de ruta de Salidas (apps.events.recommender) — ver
+# apps/events/CLAUDE.md, sección "Salidas". Todo con default='' / valores neutros para
+# que el repo arranque limpio sin ninguna clave configurada.
+OPEN_METEO_BASE_URL = env('OPEN_METEO_BASE_URL', default='https://api.open-meteo.com/v1/forecast')
+ROUTE_RECOMMENDER_AVG_SPEED_KMH = env.float('ROUTE_RECOMMENDER_AVG_SPEED_KMH', default=22.0)
+ROUTE_RECOMMENDER_DISTANCE_TOLERANCE = env.float('ROUTE_RECOMMENDER_DISTANCE_TOLERANCE', default=0.15)
+ROUTE_RECOMMENDER_ELEVATION_TOLERANCE = env.float('ROUTE_RECOMMENDER_ELEVATION_TOLERANCE', default=0.25)
+ROUTE_RECOMMENDER_MAX_CANDIDATES = env.int('ROUTE_RECOMMENDER_MAX_CANDIDATES', default=5)
+ROUTE_RECOMMENDER_HTTP_TIMEOUT_S = env.float('ROUTE_RECOMMENDER_HTTP_TIMEOUT_S', default=5.0)
+ROUTE_RECOMMENDER_MAX_TRACK_POINTS = env.int('ROUTE_RECOMMENDER_MAX_TRACK_POINTS', default=200)
+
+# 'anthropic' | 'ollama' | 'none' — sin ninguno configurado por defecto.
+ROUTE_RECOMMENDER_LLM_PROVIDER = env('ROUTE_RECOMMENDER_LLM_PROVIDER', default='none')
+ANTHROPIC_API_KEY = env('ANTHROPIC_API_KEY', default='')
+ANTHROPIC_MODEL = env('ANTHROPIC_MODEL', default='claude-haiku-4-5')
+OLLAMA_BASE_URL = env('OLLAMA_BASE_URL', default='http://127.0.0.1:11434')
+OLLAMA_MODEL = env('OLLAMA_MODEL', default='llama3.1')
+LLM_TIMEOUT_S = env.float('LLM_TIMEOUT_S', default=12.0)
+

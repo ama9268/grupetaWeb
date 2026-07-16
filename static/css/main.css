@@ -718,8 +718,43 @@ body, header, nav, main, aside, footer,
 }
 
 .route-picker:has(input[value="existing"]:checked) .route-panel--existing,
-.route-picker:has(input[value="new"]:checked) .route-panel--new {
+.route-picker:has(input[value="new"]:checked) .route-panel--new,
+.route-picker:has(input[value="recommend"]:checked) .route-panel--recommend {
   display: block;
+}
+
+/* Panel del agente de recomendación de ruta (Salidas) */
+.route-recommend-targets {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.route-recommend-targets .form-group {
+  flex: 1 1 140px;
+  margin-bottom: 0;
+}
+
+.route-recommend-candidate {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.route-recommend-candidate:has(input:checked) {
+  border-color: var(--accent);
+}
+
+.route-recommend-candidate input {
+  accent-color: var(--accent);
+  margin-top: 3px;
 }
 
 /* Auth submit button */

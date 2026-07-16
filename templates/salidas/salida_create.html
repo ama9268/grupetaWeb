@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}Crear salida{% endblock %}
+
+{% block content %}
+{% include 'events/partials/event_form.html' with heading='Crear salida' submit_label='Crear salida' back_url_name='salidas:list' is_salida=True %}
+{% endblock %}

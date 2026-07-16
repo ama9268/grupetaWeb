@@ -1,8 +1,9 @@
-{# Formulario compartido de crear/editar evento. Espera: form, heading, submit_label #}
+{# Formulario compartido de crear/editar evento y salida. Espera: form, heading,
+   submit_label, back_url_name; is_salida activa el panel del agente de recomendación. #}
 <div style="max-width:520px;margin:0 auto;">
-  <a href="{% url 'events:list' %}"
+  <a href="{% url back_url_name %}"
      style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
-    ← Eventos
+    {% if is_salida %}← Salidas{% else %}← Eventos{% endif %}
   </a>
   <div class="card" style="border-radius:var(--radius-xl);padding:24px;">
     <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);margin-bottom:20px;">{{ heading }}</h1>
@@ -13,9 +14,10 @@
       <p class="form-error" style="margin-bottom:12px;">{{ form.non_field_errors.0 }}</p>
       {% endif %}
 
-      {# Campos estándar del evento (se excluye la sección de ruta, que es a medida). #}
+      {# Campos estándar (se excluyen la sección de ruta y los objetivos del agente,
+         que son a medida más abajo). #}
       {% for field in form %}
-      {% if field.name != 'route_mode' and field.name != 'associated_route' and field.name != 'gpx_file' %}
+      {% if field.name != 'route_mode' and field.name != 'associated_route' and field.name != 'gpx_file' and field.name != 'recommended_route' and field.name != 'target_distance_km' and field.name != 'target_elevation_gain_m' %}
       <div class="form-group">
         <label class="form-label" for="{{ field.auto_id }}">{{ field.label }}</label>
         {{ field }}
@@ -29,7 +31,7 @@
       {% endif %}
       {% endfor %}
 
-      {# Sección de ruta: sin ruta / elegir existente / subir GPX nuevo. #}
+      {# Sección de ruta: sin ruta / elegir existente / subir GPX nuevo / (Salidas) recomendar. #}
       {% with mode=form.route_mode.value|default:'none' %}
       <div class="form-group route-picker">
         <span class="form-label">{{ form.route_mode.label }}</span>
@@ -46,6 +48,12 @@
             <input type="radio" name="route_mode" value="new" {% if mode == 'new' %}checked{% endif %}>
             <span>Subir GPX nuevo</span>
           </label>
+          {% if is_salida %}
+          <label class="route-mode">
+            <input type="radio" name="route_mode" value="recommend" {% if mode == 'recommend' %}checked{% endif %}>
+            <span>Recomendar ruta (viento)</span>
+          </label>
+          {% endif %}
         </div>
 
         <div class="route-panel route-panel--existing">
@@ -65,6 +73,32 @@
           {% endif %}
         </div>
 
+        {% if is_salida %}
+        <div class="route-panel route-panel--recommend">
+          <div class="route-recommend-targets">
+            <div class="form-group">
+              <label class="form-label" for="{{ form.target_distance_km.auto_id }}">{{ form.target_distance_km.label }}</label>
+              {{ form.target_distance_km }}
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="{{ form.target_elevation_gain_m.auto_id }}">{{ form.target_elevation_gain_m.label }}</label>
+              {{ form.target_elevation_gain_m }}
+            </div>
+          </div>
+          <button type="button" class="btn-secondary" style="width:100%;margin-bottom:10px;"
+                  hx-post="{% url 'salidas:route_recommend' %}"
+                  hx-include="closest form"
+                  hx-target="#recommend-results"
+                  hx-swap="innerHTML">
+            Buscar recomendación
+          </button>
+          <div id="recommend-results"></div>
+          {% if form.recommended_route.errors %}
+          <p class="form-error">{{ form.recommended_route.errors.0 }}</p>
+          {% endif %}
+        </div>
+        {% endif %}
+
         {% if form.route_mode.errors %}
         <p class="form-error">{{ form.route_mode.errors.0 }}</p>
         {% endif %}
@@ -73,7 +107,7 @@
 
       <div style="display:flex;gap:10px;margin-top:6px;">
         <button type="submit" class="btn-primary" style="flex:1;">{{ submit_label }}</button>
-        <a href="{% url 'events:list' %}" class="btn-secondary">Cancelar</a>
+        <a href="{% url back_url_name %}" class="btn-secondary">Cancelar</a>
       </div>
     </form>
   </div>

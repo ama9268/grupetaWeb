@@ -1,0 +1,53 @@
+{# Resultado del agente de recomendación de ruta. Espera: result (RecommendationResult o
+   None), llm_enabled (bool), missing_start_at (bool). Ver apps/events/recommender/. #}
+{% if missing_start_at %}
+<p style="font-family:var(--font-body);font-size:13px;color:var(--dim);padding:10px 0;">
+  Indica primero la fecha y hora de la salida y la grupeta para poder consultar el viento.
+</p>
+{% elif not result.candidates %}
+<div class="empty-state" style="padding:20px;">
+  <p style="font-family:var(--font-body);font-size:13px;color:var(--dim);">
+    Ninguna ruta de esta grupeta encaja con esos objetivos, ni ampliando la tolerancia.
+  </p>
+  <p style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-top:6px;">
+    Prueba con otros objetivos, o elige "Subir un GPX nuevo" para crear la ruta directamente.
+  </p>
+</div>
+{% else %}
+{% if result.tolerance_widened %}
+<p style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-bottom:8px;">
+  No había candidatas exactas: se ha ampliado el margen de km/desnivel.
+</p>
+{% endif %}
+
+{% for candidate in result.candidates %}
+<label class="route-recommend-candidate">
+  <input type="radio" name="recommended_route" value="{{ candidate.route.pk }}" {% if forloop.first %}checked{% endif %}>
+  <span style="flex:1;">
+    <span style="display:block;font-family:var(--font-body);font-weight:700;font-size:13px;color:var(--text);">
+      {{ candidate.route.title }}{% if candidate.is_loop %} <span class="chip" style="font-size:10px;">circuito</span>{% endif %}
+    </span>
+    <span style="display:block;font-family:var(--font-body);font-size:12px;color:var(--dim);margin-top:2px;">
+      {{ candidate.route.distance_km }} km
+      {% if candidate.route.elevation_gain_m %} · {{ candidate.route.elevation_gain_m }} m desnivel{% endif %}
+      {% if candidate.wind_available %}
+        · {% if candidate.tailwind_kmh >= 0 %}viento a favor{% else %}viento en contra{% endif %} en la vuelta ({{ candidate.tailwind_kmh|floatformat:1 }} km/h)
+      {% else %}
+        · sin datos de viento
+      {% endif %}
+    </span>
+  </span>
+</label>
+{% endfor %}
+
+{% if llm_enabled %}
+<button type="button" class="btn-secondary" style="width:100%;margin-top:4px;"
+        hx-post="{% url 'salidas:route_recommend_explain' %}"
+        hx-include="closest form"
+        hx-target="#recommend-explanation"
+        hx-swap="innerHTML">
+  Explicar con IA
+</button>
+{% endif %}
+<div id="recommend-explanation"></div>
+{% endif %}

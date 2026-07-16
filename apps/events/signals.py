@@ -1,7 +1,13 @@
 from django.db.models.signals import pre_save, post_save
-from django.dispatch import receiver
+from django.dispatch import Signal, receiver
 
 from .models import Event, EventRSVP
+
+# Se dispara cuando un miembro pasa a "Voy" en un evento/salida (ver
+# update_events_attended más abajo). Sin receptores conectados todavía — punto de
+# enganche preparado para la futura notificación a un grupo de Telegram cuando alguien
+# se apunta a una Salida (fuera de alcance de esta iteración, ver apps/events/CLAUDE.md).
+rsvp_confirmed = Signal()  # providing_args: rsvp (EventRSVP)
 
 
 @receiver(post_save, sender=Event)
@@ -41,6 +47,7 @@ def update_events_attended(sender, instance, created, **kwargs):
     if current == going and previous != going:
         profile.total_events_attended += 1
         profile.save(update_fields=['total_events_attended'])
+        rsvp_confirmed.send(sender=EventRSVP, rsvp=instance)
     elif current != going and previous == going:
         profile.total_events_attended = max(0, profile.total_events_attended - 1)
         profile.save(update_fields=['total_events_attended'])

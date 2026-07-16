@@ -11,9 +11,9 @@
 
 {% block content %}
 
-<a href="{% url 'events:list' %}"
+<a href="{% url list_url_name %}"
    style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
-  ← Eventos
+  {{ back_label }}
 </a>
 
 {# Hero #}
@@ -45,7 +45,16 @@
         <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:6px;">
           {{ event.start_at|date:"l, d \d\e F \d\e Y" }} a las {{ event.start_at|date:"H:i" }}
           {% if event.location %} · {{ event.location }}{% endif %}
+          {% if event.pace_level %} · Ritmo {{ event.get_pace_level_display|lower }}{% endif %}
         </p>
+        {% if event.target_distance_km or event.target_elevation_gain_m %}
+        <p style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-top:2px;">
+          Objetivo:
+          {% if event.target_distance_km %}{{ event.target_distance_km }} km{% endif %}
+          {% if event.target_distance_km and event.target_elevation_gain_m %} · {% endif %}
+          {% if event.target_elevation_gain_m %}{{ event.target_elevation_gain_m }} m de desnivel{% endif %}
+        </p>
+        {% endif %}
       </div>
 
       {# Acciones de moderador #}
@@ -57,7 +66,7 @@
           <button type="submit" class="btn-primary" style="font-size:13px;">Aceptar</button>
         </form>
         {% endif %}
-        <a href="{% url 'events:edit' event.pk %}" class="btn-secondary" style="font-size:13px;">Editar</a>
+        <a href="{% url edit_url_name event.pk %}" class="btn-secondary" style="font-size:13px;">Editar</a>
         {% if event.state != 'cancelado' %}
         <form method="post" action="{% url 'events:cancel' event.pk %}"
               onsubmit="return confirm('¿Cancelar este evento? Su chat y álbum quedarán en solo lectura.');">

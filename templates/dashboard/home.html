@@ -44,7 +44,7 @@
 
   {# Columna derecha: tarjeta evento #}
   {% if next_event %}
-  <a href="{% url 'events:detail' next_event.pk %}"
+  <a href="{{ next_event.get_absolute_url }}"
      style="display:block;border-radius:var(--radius-xl);border:1px solid var(--border);background:var(--surface);overflow:hidden;text-decoration:none;transition:box-shadow .2s ease;"
      onmouseenter="this.style.boxShadow='var(--shadow-md)'"
      onmouseleave="this.style.boxShadow='none'">
@@ -222,7 +222,7 @@
   </div>
   <div style="display:flex;flex-direction:column;gap:10px;">
     {% for event in upcoming_events %}
-    <a href="{% url 'events:detail' event.pk %}"
+    <a href="{{ event.get_absolute_url }}"
        style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:13px 16px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);text-decoration:none;">
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:13px;padding:8px 14px;text-align:center;min-width:56px;flex-shrink:0;">
         <div style="font-family:var(--font-mono);font-weight:700;font-size:10px;color:var(--accent);text-transform:uppercase;">{{ event.date|date:"D" }}</div>

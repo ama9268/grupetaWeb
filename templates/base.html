@@ -40,6 +40,8 @@
          class="nav-item{% if ns == 'routes' %} active{% endif %}">Rutas</a>
       <a href="{% url 'events:list' %}"
          class="nav-item{% if ns == 'events' %} active{% endif %}">Eventos</a>
+      <a href="{% url 'salidas:list' %}"
+         class="nav-item{% if ns == 'salidas' %} active{% endif %}">Salidas</a>
       <a href="{% url 'media_gallery:list' %}"
          class="nav-item{% if ns == 'media_gallery' %} active{% endif %}">Galería</a>
       <a href="{% url 'blog:list' %}"

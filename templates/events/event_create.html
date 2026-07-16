@@ -2,5 +2,5 @@
 {% block title %}Crear evento{% endblock %}
 
 {% block content %}
-{% include 'events/partials/event_form.html' with heading='Crear evento' submit_label='Crear evento' %}
+{% include 'events/partials/event_form.html' with heading='Crear evento' submit_label='Crear evento' back_url_name='events:list' %}
 {% endblock %}

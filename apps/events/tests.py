@@ -16,9 +16,13 @@ def _default_group():
 
 @pytest.fixture
 def future_event(db, approved_moderator):
+    # OTRO (no ruta_especial): estas pruebas ejercitan RSVP/aceptar/cancelar/media, que
+    # son acciones compartidas con Salidas y no dependen del tipo — usar un tipo gestionable
+    # desde `events:detail`/`events:edit` evita acoplar estos tests a la sección Salidas
+    # (ver test_salidas.py / la sección "Eventos vs Salidas" en apps/events/CLAUDE.md).
     return Event.objects.create(
         title='Evento test',
-        event_type=Event.EventType.RUTA_ESPECIAL,
+        event_type=Event.EventType.OTRO,
         start_at=timezone.now() + timedelta(days=7),
         created_by=approved_moderator, group=_default_group(),
     )
@@ -93,7 +97,7 @@ def test_moderator_can_create_event(moderator_client):
     response = moderator_client.post(reverse('events:create'), {
         'group': _default_group().pk,
         'title': 'Salida al puerto',
-        'event_type': 'ruta_especial',
+        'event_type': 'otro',
         'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
         'description': '',
         'location': '',
@@ -309,7 +313,7 @@ def test_create_event_with_new_gpx_creates_and_links_route(moderator_client, app
     response = moderator_client.post(reverse('events:create'), {
         'group': _default_group().pk,
         'title': 'Marcha con GPX',
-        'event_type': 'ruta_especial',
+        'event_type': 'otro',
         'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
         'description': 'Descripción de la marcha',
         'location': '',
@@ -337,7 +341,7 @@ def test_create_event_with_existing_route_does_not_create_route(moderator_client
     response = moderator_client.post(reverse('events:create'), {
         'group': _default_group().pk,
         'title': 'Evento con ruta existente',
-        'event_type': 'ruta_especial',
+        'event_type': 'otro',
         'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
         'description': '',
         'location': '',
@@ -396,7 +400,7 @@ def test_edit_event_switch_existing_to_new_gpx_replaces_route(moderator_client, 
     )
     response = moderator_client.post(reverse('events:edit', args=[event.pk]), {
         'title': 'Evento editable',
-        'event_type': 'ruta_especial',
+        'event_type': 'otro',
         'start_at': (timezone.now() + timedelta(days=4)).strftime('%Y-%m-%dT%H:%M'),
         'description': '',
         'location': '',
@@ -421,7 +425,7 @@ def test_edit_event_mode_none_clears_route(moderator_client, approved_moderator)
     )
     response = moderator_client.post(reverse('events:edit', args=[event.pk]), {
         'title': 'Evento a limpiar',
-        'event_type': 'ruta_especial',
+        'event_type': 'otro',
         'start_at': (timezone.now() + timedelta(days=4)).strftime('%Y-%m-%dT%H:%M'),
         'description': '',
         'location': '',
@@ -431,3 +435,112 @@ def test_edit_event_mode_none_clears_route(moderator_client, approved_moderator)
     event.refresh_from_db()
     assert event.associated_route is None
     assert Route.objects.filter(pk=route.pk).exists()
+
+
+# --- Eventos / Salidas: misma tabla, dos secciones (ver apps/events/CLAUDE.md, "Salidas") ---
+
+@pytest.fixture
+def future_salida(db, approved_moderator):
+    return Event.objects.create(
+        title='Salida test', event_type=Event.EventType.RUTA_ESPECIAL,
+        start_at=timezone.now() + timedelta(days=7),
+        created_by=approved_moderator, group=_default_group(),
+    )
+
+
+@pytest.mark.django_db
+def test_ruta_especial_not_in_events_list(moderator_client, future_salida):
+    response = moderator_client.get(reverse('events:list'), {'estado': 'todos'})
+    assert future_salida.title.encode() not in response.content
+
+
+@pytest.mark.django_db
+def test_ruta_especial_in_salidas_list(moderator_client, future_salida):
+    response = moderator_client.get(reverse('salidas:list'), {'estado': 'todos'})
+    assert future_salida.title.encode() in response.content
+
+
+@pytest.mark.django_db
+def test_events_detail_404_for_ruta_especial(member_client, future_salida):
+    # Una salida no se ve desde /events/<pk>/ — solo desde /salidas/<pk>/.
+    response = member_client.get(reverse('events:detail', args=[future_salida.pk]))
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_salidas_detail_renders(member_client, future_salida):
+    response = member_client.get(reverse('salidas:detail', args=[future_salida.pk]))
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_events_edit_404_for_ruta_especial(moderator_client, future_salida):
+    # Evita que /events/<pk>/editar/ reasigne por error event_type a través de EventForm.
+    response = moderator_client.get(reverse('events:edit', args=[future_salida.pk]))
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_salidas_edit_404_for_non_ruta_especial(moderator_client, future_event):
+    response = moderator_client.get(reverse('salidas:edit', args=[future_event.pk]))
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_event_type_ruta_especial_not_selectable_via_events_create(moderator_client):
+    response = moderator_client.post(reverse('events:create'), {
+        'group': _default_group().pk,
+        'title': 'Intento de colar una salida',
+        'event_type': 'ruta_especial',
+        'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
+        'description': '', 'location': '',
+    })
+    assert response.status_code == 200  # el formulario rechaza la opción, no está en choices
+    assert not Event.objects.filter(title='Intento de colar una salida').exists()
+
+
+@pytest.mark.django_db
+def test_salidas_create_sets_ruta_especial_and_requires_pace_level(moderator_client):
+    response = moderator_client.post(reverse('salidas:create'), {
+        'group': _default_group().pk,
+        'title': 'Salida del sábado',
+        'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
+        'description': '', 'location': 'Plaza Mayor',
+        'route_mode': 'none',
+        # sin pace_level: debe rechazarse.
+    })
+    assert response.status_code == 200
+    assert not Event.objects.filter(title='Salida del sábado').exists()
+
+    response = moderator_client.post(reverse('salidas:create'), {
+        'group': _default_group().pk,
+        'title': 'Salida del sábado',
+        'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
+        'description': '', 'location': 'Plaza Mayor', 'pace_level': 'medio',
+        'route_mode': 'none',
+    })
+    assert response.status_code == 302
+    salida = Event.objects.get(title='Salida del sábado')
+    assert salida.event_type == Event.EventType.RUTA_ESPECIAL
+    assert salida.pace_level == 'medio'
+
+
+@pytest.mark.django_db
+def test_member_cannot_create_salida(member_client):
+    response = member_client.get(reverse('salidas:create'))
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_get_absolute_url_routes_by_type(future_event, future_salida):
+    assert future_event.get_absolute_url() == reverse('events:detail', args=[future_event.pk])
+    assert future_salida.get_absolute_url() == reverse('salidas:detail', args=[future_salida.pk])
+
+
+@pytest.mark.django_db
+def test_rsvp_works_from_salidas_section(approved_member, member_client, future_salida):
+    # Acción compartida (no duplicada por sección): apuntarse funciona igual en una salida.
+    response = member_client.post(reverse('events:rsvp', args=[future_salida.pk, 'si']))
+    assert response.status_code == 200
+    rsvp = EventRSVP.objects.get(event=future_salida, member=approved_member)
+    assert rsvp.response == 'si'

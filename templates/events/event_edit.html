@@ -2,5 +2,5 @@
 {% block title %}Editar evento{% endblock %}
 
 {% block content %}
-{% include 'events/partials/event_form.html' with heading='Editar evento' submit_label='Guardar cambios' %}
+{% include 'events/partials/event_form.html' with heading='Editar evento' submit_label='Guardar cambios' back_url_name='events:list' %}
 {% endblock %}

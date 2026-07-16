@@ -1,0 +1,10 @@
+{# Narrativa del LLM sobre el ranking ya calculado. Espera: text (str o None). #}
+{% if text %}
+<p style="font-family:var(--font-body);font-size:13px;line-height:1.5;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;margin-top:8px;">
+  {{ text|linebreaksbr }}
+</p>
+{% else %}
+<p style="font-family:var(--font-body);font-size:12px;color:var(--dim);margin-top:8px;">
+  No se pudo generar la explicación por IA ahora mismo — usa el ranking numérico de arriba.
+</p>
+{% endif %}

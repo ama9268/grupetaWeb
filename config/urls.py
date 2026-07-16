@@ -12,6 +12,7 @@ urlpatterns = [
     path('members/', include('apps.members.urls')),
     path('routes/', include('apps.routes.urls')),
     path('events/', include('apps.events.urls')),
+    path('salidas/', include('apps.events.salidas_urls')),
     path('blog/', include('apps.blog.urls')),
     path('gallery/', include('apps.media_gallery.urls')),
     path('chat/', include('apps.chat.urls')),

@@ -151,3 +151,49 @@ def test_moderator_of_b_cannot_create_route_in_group_of_a(mod_client_b, default_
     })
     assert response.status_code == 200
     assert not Route.objects.filter(title='Ruta colada').exists()
+
+
+# --- Salidas (apps.events, event_type=ruta_especial) y el agente de recomendación ---
+
+@pytest.fixture
+def salida_a(default_group, approved_moderator):
+    return Event.objects.create(
+        title='Salida de A', event_type=Event.EventType.RUTA_ESPECIAL,
+        start_at=timezone.now() + timedelta(days=3),
+        created_by=approved_moderator, group=default_group,
+    )
+
+
+@pytest.mark.django_db
+def test_member_of_b_cannot_view_salida_of_a(client_b, salida_a):
+    response = client_b.get(reverse('salidas:detail', args=[salida_a.pk]))
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_member_of_a_does_not_see_salida_of_b_in_list(member_client, group_b, approved_moderator, default_group):
+    Event.objects.create(
+        title='Salida exclusiva de B', event_type=Event.EventType.RUTA_ESPECIAL,
+        start_at=timezone.now() + timedelta(days=3), created_by=approved_moderator, group=group_b,
+    )
+    response = member_client.get(reverse('salidas:list'))
+    assert b'Salida exclusiva de B' not in response.content
+
+
+@pytest.mark.django_db
+def test_moderator_of_b_cannot_call_route_recommend_for_group_of_a(mod_client_b, default_group):
+    response = mod_client_b.post(reverse('salidas:route_recommend'), {
+        'group': default_group.pk,
+        'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
+    })
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_associated_route_choices_do_not_leak_across_groups(mod_client_b, group_b, default_group, approved_member):
+    # El desplegable "Elegir ruta existente" de Salidas solo debe ofrecer rutas de la
+    # grupeta elegida en el formulario, nunca las de otra (bug preexistente corregido de
+    # paso al construir el agente de recomendación — ver apps/events/forms.py).
+    Route.objects.create(group=default_group, title='Ruta ajena de A', author=approved_member)
+    response = mod_client_b.get(reverse('salidas:create'))
+    assert b'Ruta ajena de A' not in response.content

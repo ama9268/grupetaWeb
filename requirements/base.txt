@@ -7,6 +7,8 @@ django-cloudinary-storage
 gpxpy
 stravalib
 cryptography
+requests
+anthropic
 pillow
 psycopg2-binary
 channels

@@ -44,15 +44,31 @@ class EventForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['start_at'].input_formats = ['%Y-%m-%dT%H:%M']
         self.fields['associated_route'].required = False
+        # "Ruta especial" se crea y gestiona exclusivamente desde Salidas (ver SalidaForm),
+        # que además ofrece el agente de recomendación de ruta con sus propios campos.
+        if 'event_type' in self.fields:
+            self.fields['event_type'].choices = [
+                (value, label) for value, label in Event.EventType.choices
+                if value != Event.EventType.RUTA_ESPECIAL
+            ]
 
+        route_group = None
         if self.instance and self.instance.pk:
             # La grupeta de un evento ya creado no se cambia (chat/álbum/RSVP
             # ya están ligados a ella): se muestra de solo lectura.
             self.fields['group'].disabled = True
+            route_group = self.instance.group_id
         elif user is not None:
             self.fields['group'].queryset = user.profile.moderated_groups().order_by('name')
             if initial_group is not None:
                 self.initial.setdefault('group', initial_group.pk)
+                route_group = initial_group.pk
+        # El desplegable de "ruta existente" solo debe mostrar rutas de la grupeta del
+        # evento, nunca las de otra grupeta (Route ya lleva FK a group).
+        from apps.routes.models import Route
+        self.fields['associated_route'].queryset = (
+            Route.objects.filter(group=route_group) if route_group else Route.objects.none()
+        )
         if self.instance and self.instance.pk and self.instance.start_at:
             self.initial['start_at'] = self.instance.start_at.strftime('%Y-%m-%dT%H:%M')
         # Modo inicial: si el evento ya tiene ruta asociada, arrancar en "existente".
@@ -107,3 +123,52 @@ class EventForm(forms.ModelForm):
                 f'Formato de imagen no válido ({kind.mime}). Usa JPG, PNG, WebP o GIF.'
             )
         return image
+
+
+class SalidaForm(EventForm):
+    """Formulario de "Salidas" (Event con event_type=RUTA_ESPECIAL fijo, no elegible aquí —
+    lo fija la vista antes de guardar, ver apps/events/views.py). Añade los campos propios
+    del agente de recomendación de ruta y una 4ª opción de `route_mode` que lo activa.
+    """
+    ROUTE_MODE_CHOICES = EventForm.ROUTE_MODE_CHOICES + (
+        ('recommend', 'Recomendar ruta (viento)'),
+    )
+    route_mode = forms.ChoiceField(
+        choices=ROUTE_MODE_CHOICES, required=False,
+        widget=forms.RadioSelect, initial='none', label='Ruta',
+    )
+
+    class Meta(EventForm.Meta):
+        fields = (
+            'group', 'title', 'description', 'start_at', 'location', 'associated_route',
+            'pace_level', 'target_distance_km', 'target_elevation_gain_m',
+        )
+        widgets = EventForm.Meta.widgets
+        labels = {
+            **EventForm.Meta.labels,
+            'location': 'Punto de encuentro',
+            'pace_level': 'Nivel / ritmo',
+            'target_distance_km': 'Distancia objetivo (km)',
+            'target_elevation_gain_m': 'Desnivel objetivo (m)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['pace_level'].required = True
+        self.fields['target_distance_km'].required = False
+        self.fields['target_elevation_gain_m'].required = False
+        # Radios del panel "Recomendar ruta" (ver partials/route_recommendation_results.html):
+        # campo APARTE de `associated_route` — si compartieran `name`, el <select> oculto
+        # del panel "existente" y estos radios postearían ambos bajo la misma clave y
+        # ganaría el último en orden del DOM, algo frágil y confuso. Mismo queryset
+        # acotado por grupeta que `associated_route` (ver EventForm.__init__).
+        self.fields['recommended_route'] = forms.ModelChoiceField(
+            queryset=self.fields['associated_route'].queryset, required=False,
+        )
+        self.fields['recommended_route'].widget.attrs['class'] = 'input'
+
+    def clean(self):
+        cleaned = super().clean()
+        if (cleaned.get('route_mode') or 'none') == 'recommend':
+            cleaned['associated_route'] = cleaned.get('recommended_route')
+        return cleaned

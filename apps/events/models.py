@@ -19,6 +19,11 @@ class Event(models.Model):
         CARRERA = 'carrera', 'Carrera'
         OTRO = 'otro', 'Otro'
 
+    class PaceLevel(models.TextChoices):
+        SUAVE = 'suave', 'Suave'
+        MEDIO = 'medio', 'Medio'
+        FUERTE = 'fuerte', 'Fuerte'
+
     # Estados que se muestran por defecto en el listado (activos/próximos).
     DEFAULT_LIST_STATES = (State.PENDIENTE, State.ACEPTADO)
 
@@ -51,6 +56,12 @@ class Event(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Campos específicos de "Salidas" (event_type=RUTA_ESPECIAL); quedan vacíos/blank para
+    # el resto de tipos de evento. Ver apps/events/CLAUDE.md, sección "Salidas".
+    pace_level = models.CharField(max_length=20, choices=PaceLevel.choices, blank=True)
+    target_distance_km = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    target_elevation_gain_m = models.IntegerField(null=True, blank=True)
+
     class Meta:
         ordering = ['start_at']
         indexes = [
@@ -61,6 +72,15 @@ class Event(models.Model):
 
     def __str__(self):
         return f'{self.title} ({self.start_at.strftime("%d/%m/%Y")})'
+
+    def get_absolute_url(self):
+        """Salidas (ruta_especial) y el resto de eventos viven en la misma tabla pero se
+        navegan desde secciones distintas (ver apps/events/CLAUDE.md, "Salidas") — esta es
+        la única fuente de verdad de a qué namespace enlazar, para no repetir el `if` en
+        cada plantilla o vista que necesite enlazar a la ficha de un evento."""
+        from django.urls import reverse
+        namespace = 'salidas' if self.event_type == self.EventType.RUTA_ESPECIAL else 'events'
+        return reverse(f'{namespace}:detail', args=[self.pk])
 
     @property
     def is_upcoming(self):

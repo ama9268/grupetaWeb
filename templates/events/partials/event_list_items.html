@@ -1,5 +1,5 @@
 {% for event in events %}
-<a href="{% url 'events:detail' event.pk %}"
+<a href="{{ event.get_absolute_url }}"
    style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);text-decoration:none;{% if event.state == 'cancelado' or event.state == 'superado' %}opacity:.72;{% endif %}">
 
   {# Miniatura / badge de fecha #}
@@ -24,6 +24,7 @@
       {{ event.get_event_type_display }} · {{ event.start_at|date:"d/m/Y H:i" }}
       {% if event.location %} · {{ event.location }}{% endif %}
       {% if event.associated_route %} · {{ event.associated_route.distance_km }} km{% endif %}
+      {% if event.pace_level %} · Ritmo {{ event.get_pace_level_display|lower }}{% endif %}
     </div>
   </div>
 

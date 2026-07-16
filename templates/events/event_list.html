@@ -1,29 +1,29 @@
 {% extends 'base.html' %}
-{% block title %}Eventos{% endblock %}
+{% block title %}{{ heading }}{% endblock %}
 
 {% block content %}
 
 <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
   <div>
-    <h1 style="font-family:var(--font-title);font-weight:800;font-size:30px;letter-spacing:-.6px;color:var(--text);">Eventos</h1>
-    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">Rutas especiales, viajes y carreras de la grupeta</p>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:30px;letter-spacing:-.6px;color:var(--text);">{{ heading }}</h1>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--dim);margin-top:4px;">{{ heading_description }}</p>
   </div>
   {% if request.user.profile.is_moderator %}
-  <a href="{% url 'events:create' %}" class="btn-primary">+ Crear evento</a>
+  <a href="{% url create_url_name %}" class="btn-primary">{{ create_label }}</a>
   {% endif %}
 </div>
 
 {# Filtro de estado (HTMX) #}
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
   {% with active=estado %}
-  <a href="?estado=activos" hx-get="{% url 'events:list' %}?estado=activos" hx-target="#events-container" hx-swap="innerHTML" hx-push-url="true"
+  <a href="?estado=activos" hx-get="{% url list_url_name %}?estado=activos" hx-target="#events-container" hx-swap="innerHTML" hx-push-url="true"
      class="filter-pill{% if active == 'activos' %} filter-pill--active{% endif %}"
      style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == 'activos' %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">Activos</a>
   {% for value, label in state_choices %}
-  <a href="?estado={{ value }}" hx-get="{% url 'events:list' %}?estado={{ value }}" hx-target="#events-container" hx-swap="innerHTML" hx-push-url="true"
+  <a href="?estado={{ value }}" hx-get="{% url list_url_name %}?estado={{ value }}" hx-target="#events-container" hx-swap="innerHTML" hx-push-url="true"
      style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == value %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">{{ label }}</a>
   {% endfor %}
-  <a href="?estado=todos" hx-get="{% url 'events:list' %}?estado=todos" hx-target="#events-container" hx-swap="innerHTML" hx-push-url="true"
+  <a href="?estado=todos" hx-get="{% url list_url_name %}?estado=todos" hx-target="#events-container" hx-swap="innerHTML" hx-push-url="true"
      style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == 'todos' %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">Todos</a>
   {% endwith %}
 </div>
