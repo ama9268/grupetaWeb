@@ -16,17 +16,54 @@
 </a>
 
 {# Cabecera #}
-<div style="margin-bottom:18px;">
-  <h1 style="font-family:var(--font-title);font-weight:800;font-size:clamp(22px,4vw,32px);letter-spacing:-.7px;color:var(--text);line-height:1.1;">{{ route.title }}</h1>
-  <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
-    <div class="avatar" style="width:24px;height:24px;font-size:9px;">
-      {{ route.author.username|slice:":1"|upper|default:'M' }}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+  <div>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:clamp(22px,4vw,32px);letter-spacing:-.7px;color:var(--text);line-height:1.1;">{{ route.title }}</h1>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+      <div class="avatar" style="width:24px;height:24px;font-size:9px;">
+        {{ route.author.username|slice:":1"|upper|default:'M' }}
+      </div>
+      <span style="font-family:var(--font-body);font-size:13px;color:var(--dim);">
+        {{ route.author.username|default:"Miembro" }}
+        · subida el {{ route.created_at|date:"d/m/Y" }}
+      </span>
+      {% if route.difficulty %}
+      <span style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px 10px;font-family:var(--font-body);font-weight:600;font-size:11px;color:var(--dim);">
+        {{ route.get_difficulty_display }}
+      </span>
+      {% endif %}
+      {% if route.is_archived %}
+      <span style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px 10px;font-family:var(--font-body);font-weight:600;font-size:11px;color:var(--error);">
+        Archivada
+      </span>
+      {% endif %}
+      {% if not route.recommendable_for_salidas %}
+      <span style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px 10px;font-family:var(--font-body);font-weight:600;font-size:11px;color:var(--dim);">
+        No recomendable para Salidas
+      </span>
+      {% endif %}
     </div>
-    <span style="font-family:var(--font-body);font-size:13px;color:var(--dim);">
-      {{ route.author.username|default:"Miembro" }}
-      · subida el {{ route.created_at|date:"d/m/Y" }}
-    </span>
   </div>
+
+  {# Acciones de moderador #}
+  {% if can_moderate %}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{% url 'routes:edit' route.pk %}" class="btn-secondary" style="font-size:13px;">Editar</a>
+    {% if not route.is_archived %}
+    <form method="post" action="{% url 'routes:delete' route.pk %}"
+          {% if has_event_history %}
+          onsubmit="return confirm('Esta ruta ha participado en algún evento o Salida, así que no se puede eliminar sin perder ese historial. Se archivará en su lugar: dejará de aparecer en el catálogo y en las recomendaciones. ¿Continuar?');"
+          {% else %}
+          onsubmit="return confirm('¿Eliminar esta ruta? Esta acción no se puede deshacer.');"
+          {% endif %}>
+      {% csrf_token %}
+      <button type="submit" class="btn-secondary" style="font-size:13px;color:var(--error);">
+        {% if has_event_history %}Archivar{% else %}Eliminar{% endif %}
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 
 {# Mapa + perfil de elevación (partial reutilizable) #}

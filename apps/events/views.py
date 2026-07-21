@@ -2,8 +2,10 @@ from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.contrib import messages
-from django.http import HttpResponseNotAllowed
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
@@ -23,6 +25,7 @@ from .forms import EventForm, SalidaForm
 from .recommender.exceptions import LLMUnavailable
 from .recommender.llm.factory import get_llm_client
 from .recommender.service import recommend_routes
+from .weather import WeatherDataUnavailable, fetch_weather_forecast, fetch_wind_grid
 
 # (valor, etiqueta, icono) para el widget RSVP.
 RSVP_OPTIONS = [
@@ -48,6 +51,10 @@ def _apply_route_selection(event, form, request):
             gpx_file=form.cleaned_data['gpx_file'],
             title=event.title,
             description=event.description,
+            # Una ruta nacida de una Salida sí es recomendable para futuras Salidas;
+            # una nacida de un viaje/carrera/otro evento puntual, no por defecto
+            # (el moderador puede corregirlo luego editando la ruta).
+            recommendable_for_salidas=(event.event_type == Event.EventType.RUTA_ESPECIAL),
         )
         event.associated_route = route
         if not parsed:
@@ -70,7 +77,9 @@ class EventListView(ApprovedUserMixin, ActiveGroupMixin, ListView):
     create_label = '+ Crear evento'
 
     def get_queryset(self):
-        estado = self.request.GET.get('estado', 'activos')
+        # 'pendiente' es el filtro por defecto (no hay un pseudo-estado "activos": con
+        # el ciclo de vida reducido, "pendiente" ya es exactamente eso).
+        estado = self.request.GET.get('estado') or Event.State.PENDIENTE
         qs = Event.objects.filter(group=self.active_group).select_related('created_by', 'associated_route')
         if self.fixed_event_type:
             qs = qs.filter(event_type=self.fixed_event_type)
@@ -80,13 +89,13 @@ class EventListView(ApprovedUserMixin, ActiveGroupMixin, ListView):
             pass
         elif estado in Event.State.values:
             qs = qs.filter(state=estado)
-        else:  # 'activos' → filtro por defecto: pendientes + aceptados
-            qs = qs.filter(state__in=Event.DEFAULT_LIST_STATES)
+        else:
+            qs = qs.filter(state=Event.State.PENDIENTE)
         return qs.order_by('start_at')
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['estado'] = self.request.GET.get('estado', 'activos')
+        ctx['estado'] = self.request.GET.get('estado') or Event.State.PENDIENTE
         ctx['state_choices'] = Event.State.choices
         ctx['heading'] = self.heading
         ctx['heading_description'] = self.heading_description
@@ -97,7 +106,10 @@ class EventListView(ApprovedUserMixin, ActiveGroupMixin, ListView):
 
     def get_template_names(self):
         if self.request.headers.get('HX-Request'):
-            return ['events/partials/event_list_items.html']
+            # Se swapea el panel entero (filtro + listado), no solo el listado, para
+            # que el pill activo se re-pinte con el `estado` recién elegido — ver
+            # events-list-panel en event_list.html.
+            return ['events/partials/event_list_panel.html']
         return ['events/event_list.html']
 
 
@@ -146,11 +158,29 @@ class EventDetailView(ApprovedUserMixin, DetailView):
         ctx['media_items'] = album.items.select_related('uploaded_by') if album else []
         ctx['media_form'] = MediaUploadForm()
         ctx['can_moderate'] = self.request.user.profile.is_group_moderator(event.group)
-        ctx['can_upload'] = album is not None and not event.is_archived
+        ctx['can_upload'] = album is not None and event.state != Event.State.ARCHIVADO
         ctx['rsvp_options'] = RSVP_OPTIONS
         ctx['back_label'] = self.back_label
         ctx['list_url_name'] = f'{self.url_namespace}:list'
         ctx['edit_url_name'] = f'{self.url_namespace}:edit'
+
+        # Meteorología + viento: solo tiene sentido si hay una ruta asociada con
+        # coordenadas (Event no lleva coordenadas propias, `location` es texto libre).
+        # `weather` es un resumen puntual calculado aquí (una sola llamada a
+        # Open-Meteo); `wind_grid_url`, en cambio, solo se resuelve — la rejilla para
+        # la animación se pide bajo demanda desde el JS al pulsar "Viento" (ver
+        # routes/partials/route_map.html), no en cada carga de la ficha.
+        route = event.associated_route
+        ctx['weather'] = None
+        ctx['wind_grid_url'] = None
+        if route and route.start_point:
+            ctx['wind_grid_url'] = reverse('events:wind_grid', args=[event.pk])
+            try:
+                ctx['weather'] = fetch_weather_forecast(
+                    lat=route.start_point.y, lon=route.start_point.x, at=event.start_at
+                )
+            except WeatherDataUnavailable:
+                ctx['weather'] = None
         return ctx
 
 
@@ -215,6 +245,24 @@ class EventUpdateView(ApprovedUserMixin, GroupModeratorRequiredMixin, UpdateView
             return qs.filter(event_type=self.fixed_event_type)
         return qs.exclude(event_type=Event.EventType.RUTA_ESPECIAL)
 
+    def get_object(self, queryset=None):
+        # Un evento/salida archivado sigue siendo un objeto visible (ficha, chat y
+        # álbum en solo lectura) — no es un caso de aislamiento (eso ya da 404 vía
+        # get_queryset), es una regla de negocio sobre un objeto visible: 403, como
+        # el resto de permisos de este módulo. Nota: GroupModeratorRequiredMixin.dispatch()
+        # llama a get_object() antes de comprobar si el usuario modera esa grupeta, así
+        # que para alguien que no la modera el 403 vendrá "por archivado" y no "por no
+        # moderar" — en ambos casos es un 403 sin información adicional filtrada.
+        obj = super().get_object(queryset)
+        if obj.state == Event.State.ARCHIVADO:
+            raise PermissionDenied
+        # Estado real en BD antes de aplicar el formulario — `state` no es un campo del
+        # ModelForm (ver EventForm._state_transition_choices), así que form.save() nunca
+        # lo toca; se compara aparte para decidir si hay que enrutar el cambio a través
+        # de mark_realizado()/archive() (ver form_valid).
+        self._original_state = obj.state
+        return obj
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
@@ -233,6 +281,17 @@ class EventUpdateView(ApprovedUserMixin, GroupModeratorRequiredMixin, UpdateView
                 delete_asset(old_public_id)
         _apply_route_selection(event, form, self.request)
         event.save()
+
+        # Cambio de estado desde el formulario (además de los botones dedicados de la
+        # ficha): solo llega aquí un moderador de esa grupeta o un Admin
+        # (GroupModeratorRequiredMixin). Se enruta por los mismos métodos que usan
+        # event_mark_realizado/event_archive para no perderse sus efectos colaterales.
+        new_state = form.cleaned_data.get('state')
+        if new_state == Event.State.REALIZADO and self._original_state != Event.State.REALIZADO:
+            event.mark_realizado(by_user=self.request.user)
+        elif new_state == Event.State.ARCHIVADO and self._original_state != Event.State.ARCHIVADO:
+            event.archive()
+
         messages.success(self.request, f'{self.entity_label} {self.entity_updated_label} correctamente.')
         return redirect(event.get_absolute_url())
 
@@ -250,22 +309,22 @@ class SalidaUpdateView(EventUpdateView):
 # Los redirects usan Event.get_absolute_url() para volver siempre a la sección correcta. ---
 
 @approved_required
-def event_accept(request, pk):
+def event_mark_realizado(request, pk):
     event = get_object_or_404(Event, pk=pk)
     require_group_moderator(request.user, event.group)
     if request.method == 'POST':
-        event.accept(by_user=request.user)
-        messages.success(request, f'"{event.title}" aceptado. Se ha creado su álbum.')
+        event.mark_realizado(by_user=request.user)
+        messages.success(request, f'"{event.title}" marcado como realizado. Se ha creado su álbum.')
     return redirect(event.get_absolute_url())
 
 
 @approved_required
-def event_cancel(request, pk):
+def event_archive(request, pk):
     event = get_object_or_404(Event, pk=pk)
     require_group_moderator(request.user, event.group)
     if request.method == 'POST':
-        event.cancel()
-        messages.success(request, f'"{event.title}" cancelado.')
+        event.archive()
+        messages.success(request, f'"{event.title}" archivado.')
     return redirect(event.get_absolute_url())
 
 
@@ -276,7 +335,7 @@ def event_media_upload(request, pk):
     if request.method != 'POST':
         return redirect(event.get_absolute_url())
 
-    if event.album is None or event.is_archived:
+    if event.album is None or event.state == Event.State.ARCHIVADO:
         messages.error(request, 'Esto no admite subida de fotos o vídeos.')
         return redirect(event.get_absolute_url())
 
@@ -294,6 +353,34 @@ def event_media_upload(request, pk):
     else:
         messages.error(request, form.errors.get('__all__', ['No se pudo subir el archivo.'])[0])
     return redirect(event.get_absolute_url())
+
+
+@approved_required
+def event_wind_grid(request, pk):
+    """Rejilla de viento (JSON, formato leaflet-velocity) para el mapa de la ficha —
+    ver routes/partials/route_map.html. Acotado a la ruta/instante de ESTE evento (no
+    admite bbox arbitrario del cliente) para no convertir el endpoint en un proxy
+    abierto hacia Open-Meteo."""
+    event = get_object_or_404(Event, pk=pk)
+    require_group_member(request.user, event.group)
+    route = event.associated_route
+    if route is None or not route.track_geom:
+        return JsonResponse({'error': 'Este evento no tiene ruta asociada.'}, status=404)
+
+    # Bounding box de la ruta + margen para que la animación cubra algo más que el
+    # trazado exacto (mismo criterio que el agente de recomendación: no ceñirse al
+    # punto/línea exacta cuando se pide una previsión de área).
+    buffer_deg = 0.15
+    min_lon, min_lat, max_lon, max_lat = route.track_geom.extent
+    try:
+        grid = fetch_wind_grid(
+            min_lat=min_lat - buffer_deg, max_lat=max_lat + buffer_deg,
+            min_lon=min_lon - buffer_deg, max_lon=max_lon + buffer_deg,
+            at=event.start_at,
+        )
+    except WeatherDataUnavailable as exc:
+        return JsonResponse({'error': str(exc)}, status=502)
+    return JsonResponse(grid, safe=False)
 
 
 @approved_required

@@ -6,15 +6,17 @@ from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import ListView, DetailView, CreateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView
 
+from apps.accounts.decorators import approved_required
 from apps.accounts.mixins import ApprovedUserMixin, ModeratorRequiredMixin
-from apps.groups.mixins import ActiveGroupMixin
+from apps.groups.mixins import ActiveGroupMixin, GroupModeratorRequiredMixin
+from apps.groups.permissions import require_group_moderator
 
 from .models import Route, StravaImportCandidate
-from .forms import RouteForm
+from .forms import RouteEditForm, RouteForm
 from .services import create_route_from_gpx, create_route_from_strava_gpx, duplicate_warning_message
-from .strava import StravaService, build_gpx_from_streams
+from .strava import StravaService, build_gpx_from_streams, sport_type_str
 
 
 class RouteListView(ApprovedUserMixin, ActiveGroupMixin, ListView):
@@ -24,7 +26,22 @@ class RouteListView(ApprovedUserMixin, ActiveGroupMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return Route.objects.select_related('author').filter(group=self.active_group)
+        qs = Route.objects.select_related('author').filter(group=self.active_group)
+        vista = self.request.GET.get('vista', 'recomendables')
+        if vista == 'no_recomendables':
+            qs = qs.filter(is_archived=False, recommendable_for_salidas=False)
+        elif vista == 'archivadas':
+            qs = qs.filter(is_archived=True)
+        elif vista == 'todas':
+            pass
+        else:  # 'recomendables' (por defecto)
+            qs = qs.filter(is_archived=False, recommendable_for_salidas=True)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['vista'] = self.request.GET.get('vista', 'recomendables')
+        return ctx
 
 
 class RouteDetailView(ApprovedUserMixin, DetailView):
@@ -34,6 +51,12 @@ class RouteDetailView(ApprovedUserMixin, DetailView):
 
     def get_queryset(self):
         return Route.objects.for_user(self.request.user).select_related('author', 'group')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['can_moderate'] = self.request.user.profile.is_group_moderator(self.object.group)
+        ctx['has_event_history'] = self.object.events.exists()
+        return ctx
 
 
 class RouteCreateView(ModeratorRequiredMixin, ActiveGroupMixin, CreateView):
@@ -55,6 +78,8 @@ class RouteCreateView(ModeratorRequiredMixin, ActiveGroupMixin, CreateView):
             gpx_file=form.cleaned_data['gpx_file'],
             title=form.cleaned_data['title'],
             description=form.cleaned_data.get('description', ''),
+            difficulty=form.cleaned_data.get('difficulty', ''),
+            recommendable_for_salidas=form.cleaned_data.get('recommendable_for_salidas', True),
         )
         if not parsed:
             messages.warning(self.request, 'No se pudieron extraer las estadísticas del GPX.')
@@ -62,6 +87,45 @@ class RouteCreateView(ModeratorRequiredMixin, ActiveGroupMixin, CreateView):
             messages.warning(self.request, duplicate_warning_message(duplicate))
         messages.success(self.request, f'Ruta "{route.title}" publicada correctamente.')
         return redirect(self.success_url)
+
+
+class RouteUpdateView(ApprovedUserMixin, GroupModeratorRequiredMixin, UpdateView):
+    model = Route
+    form_class = RouteEditForm
+    template_name = 'routes/route_edit.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, f'Ruta "{self.object.title}" actualizada correctamente.')
+        return response
+
+
+@approved_required
+def route_delete(request, pk):
+    if request.method != 'POST':
+        return redirect('routes:detail', pk=pk)
+    route = get_object_or_404(Route, pk=pk)
+    require_group_moderator(request.user, route.group)
+
+    if route.events.exists():
+        # Ha participado en algún evento/Salida: no se borra físicamente (se
+        # perdería el trazado/estadísticas de ese historial). Se archiva en su
+        # lugar: desaparece del catálogo y de las recomendaciones, pero la
+        # ficha del evento sigue mostrando su ruta.
+        route.is_archived = True
+        route.save(update_fields=['is_archived'])
+        messages.info(
+            request,
+            f'"{route.title}" ha participado en algún evento o Salida, así que no se puede '
+            'eliminar sin perder ese historial. Se ha archivado en su lugar: ya no aparecerá '
+            'en el catálogo ni en las recomendaciones de Salidas.',
+        )
+        return redirect('routes:detail', pk=route.pk)
+
+    title = route.title
+    route.delete()
+    messages.success(request, f'Ruta "{title}" eliminada.')
+    return redirect('routes:list')
 
 
 # --- Strava: conectar cuenta, revisar actividades (staging) e importar ---
@@ -143,7 +207,7 @@ class StravaSyncActionView(ModeratorRequiredMixin, View):
                         round(float(activity.total_elevation_gain)) if activity.total_elevation_gain else None
                     ),
                     moving_time_s=int(activity.moving_time) if activity.moving_time else None,
-                    sport_type=str(activity.sport_type or ''),
+                    sport_type=sport_type_str(activity),
                     start_point=Point(activity.start_latlng.lon, activity.start_latlng.lat, srid=4326),
                     started_at=activity.start_date,
                 )

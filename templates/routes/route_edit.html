@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
-{% block title %}Subir ruta GPX{% endblock %}
+{% block title %}Editar {{ route.title }}{% endblock %}
 
 {% block content %}
 <div style="max-width:520px;margin:0 auto;">
-  <a href="{% url 'routes:list' %}"
+  <a href="{% url 'routes:detail' route.pk %}"
      style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
-    ← Rutas
+    ← {{ route.title }}
   </a>
   <div class="card" style="border-radius:var(--radius-xl);padding:24px;">
-    <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);margin-bottom:20px;">Subir nueva ruta</h1>
+    <h1 style="font-family:var(--font-title);font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--text);margin-bottom:20px;">Editar ruta</h1>
 
-    <form method="post" enctype="multipart/form-data">
+    <form method="post">
       {% csrf_token %}
       {% if form.non_field_errors %}
       <p class="form-error" style="margin-bottom:12px;">{{ form.non_field_errors.0 }}</p>
@@ -35,8 +35,8 @@
       {% endfor %}
 
       <div style="display:flex;gap:10px;margin-top:6px;">
-        <button type="submit" class="btn-primary" style="flex:1;">Publicar ruta</button>
-        <a href="{% url 'routes:list' %}" class="btn-secondary">Cancelar</a>
+        <button type="submit" class="btn-primary" style="flex:1;">Guardar cambios</button>
+        <a href="{% url 'routes:detail' route.pk %}" class="btn-secondary">Cancelar</a>
       </div>
     </form>
   </div>

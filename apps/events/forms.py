@@ -1,11 +1,31 @@
 import filetype
 from django import forms
+from django.utils import timezone as dj_timezone
 
 from apps.media_gallery.cloudinary_utils import ALLOWED_IMAGE_TYPES
 from apps.routes.services import validate_gpx_upload
 from .models import Event
 
 MAGIC_BYTES_LENGTH = 261  # filetype solo necesita los primeros ~261 bytes
+
+
+def _state_transition_choices(current_state):
+    """Estados a los que se puede pasar editando el formulario, desde `current_state`.
+
+    Solo hacia delante, nunca hacia atrás (no existe "des-realizar" ni "desarchivar" —
+    ver `Event.mark_realizado`/`archive`, que son irreversibles a propósito). Se
+    recalculan en el servidor a partir del estado real en BD, no del que mande el
+    cliente, así que un intento de retroceder (POST con un estado no permitido desde
+    el actual) lo rechaza el propio `ChoiceField` como opción inválida.
+    """
+    labels = dict(Event.State.choices)
+    if current_state == Event.State.PENDIENTE:
+        allowed = [Event.State.PENDIENTE, Event.State.REALIZADO, Event.State.ARCHIVADO]
+    elif current_state == Event.State.REALIZADO:
+        allowed = [Event.State.REALIZADO, Event.State.ARCHIVADO]
+    else:
+        allowed = [Event.State.ARCHIVADO]
+    return [(value, labels[value]) for value in allowed]
 
 
 class EventForm(forms.ModelForm):
@@ -70,7 +90,26 @@ class EventForm(forms.ModelForm):
             Route.objects.filter(group=route_group) if route_group else Route.objects.none()
         )
         if self.instance and self.instance.pk and self.instance.start_at:
-            self.initial['start_at'] = self.instance.start_at.strftime('%Y-%m-%dT%H:%M')
+            # start_at llega de la BD en UTC (aware); localtime() lo pasa a hora de
+            # TIME_ZONE antes de formatear el valor inicial del <input type="datetime-
+            # local">. Un .strftime() directo mostraría la hora UTC cruda (p.ej. una
+            # Salida creada a las 08:00 locales reaparecería como 06:00 en verano).
+            self.initial['start_at'] = dj_timezone.localtime(self.instance.start_at).strftime('%Y-%m-%dT%H:%M')
+        # Cambiar el estado desde el propio formulario de edición (además de los
+        # botones dedicados de la ficha) — solo al editar (no tiene sentido al crear,
+        # siempre nace "pendiente") y solo Admin/Moderador de esa grupeta llegan aquí
+        # (GroupModeratorRequiredMixin ya protege toda la vista de edición). NO es un
+        # campo del ModelForm (fuera de Meta.fields): así el guardado normal nunca
+        # toca `state` directamente, y es la vista la que decide si hay que enrutar el
+        # cambio a través de `mark_realizado()`/`archive()` para no perderse sus
+        # efectos colaterales (álbum, archivado del chat) — ver EventUpdateView.
+        if self.instance and self.instance.pk:
+            self.fields['state'] = forms.ChoiceField(
+                choices=_state_transition_choices(self.instance.state),
+                initial=self.instance.state,
+                label='Estado',
+                required=False,  # ausente/vacío = sin cambio de estado (ver EventUpdateView.form_valid)
+            )
         # Modo inicial: si el evento ya tiene ruta asociada, arrancar en "existente".
         if not self.is_bound:
             self.initial.setdefault(

@@ -11,8 +11,8 @@ class EventRSVPInline(admin.TabularInline):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('title', 'event_type', 'start_at', 'state', 'is_archived', 'created_by')
-    list_filter = ('state', 'event_type', 'is_archived')
+    list_display = ('title', 'event_type', 'start_at', 'state', 'created_by')
+    list_filter = ('state', 'event_type')
     search_fields = ('title', 'description', 'location')
     date_hierarchy = 'start_at'
     raw_id_fields = ['associated_route', 'created_by']

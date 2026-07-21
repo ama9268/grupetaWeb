@@ -1,0 +1,19 @@
+{% comment %}
+Filtro de estado + listado: se swapean juntos por HTMX (ver events-list-panel en
+event_list.html) para que el pill activo se re-pinte con el nuevo `estado` — si solo
+se swapeara el listado, los pills quedarían congelados con el resaltado inicial.
+{% endcomment %}
+{% with active=estado %}
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+  {% for value, label in state_choices %}
+  <a href="?estado={{ value }}" hx-get="{% url list_url_name %}?estado={{ value }}" hx-target="#events-list-panel" hx-swap="innerHTML" hx-push-url="true"
+     style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == value %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">{{ label }}</a>
+  {% endfor %}
+  <a href="?estado=todos" hx-get="{% url list_url_name %}?estado=todos" hx-target="#events-list-panel" hx-swap="innerHTML" hx-push-url="true"
+     style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == 'todos' %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">Todos</a>
+</div>
+{% endwith %}
+
+<div style="display:flex;flex-direction:column;gap:13px;">
+  {% include 'events/partials/event_list_items.html' %}
+</div>

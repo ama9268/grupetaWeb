@@ -6,6 +6,11 @@ from apps.groups.querysets import GroupScopedQuerySet
 
 
 class Route(gis_models.Model):
+    class Difficulty(models.TextChoices):
+        SUAVE = 'suave', 'Suave'
+        MEDIA = 'media', 'Media'
+        DURA = 'dura', 'Dura'
+
     group = models.ForeignKey(
         'groups.Group', on_delete=models.PROTECT, related_name='routes'
     )
@@ -13,6 +18,24 @@ class Route(gis_models.Model):
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    difficulty = models.CharField(max_length=10, choices=Difficulty.choices, blank=True)
+    recommendable_for_salidas = models.BooleanField(
+        default=True,
+        verbose_name='Recomendable para Salidas',
+        help_text=(
+            'Desmárcala si es una ruta puntual (p.ej. un viaje lejano) que no debe '
+            'sugerirse para las Salidas habituales de la grupeta.'
+        ),
+    )
+    is_archived = models.BooleanField(
+        default=False,
+        verbose_name='Archivada',
+        help_text=(
+            'Una ruta archivada desaparece del catálogo y de las recomendaciones de '
+            'Salidas, pero se conserva (no se puede eliminar una ruta que ya ha '
+            'participado en algún evento/Salida, para no perder su historial).'
+        ),
+    )
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='routes')
     gpx_file = models.FileField(upload_to='gpx/', blank=True)
 

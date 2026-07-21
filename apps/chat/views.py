@@ -20,7 +20,7 @@ from .forms import ChatAttachmentForm, ChatRoomForm
 from .serializers import serialize_message
 
 # Estados de evento cuya subsala se considera inactiva (se pliega en el sidebar).
-INACTIVE_EVENT_STATES = {'superado', 'cancelado'}
+INACTIVE_EVENT_STATES = {'archivado'}
 
 
 def _room_event(room):
@@ -130,7 +130,7 @@ class ChatRoomView(ApprovedUserMixin, ActiveGroupMixin, TemplateView):
         ctx['general_rooms'] = general_rooms
 
         # Subsalas de eventos ordenadas por fecha del evento (las más recientes primero),
-        # separando las activas de las archivadas (canceladas/superadas) para plegarlas.
+        # separando las activas de las archivadas (evento en estado "archivado") para plegarlas.
         event_rooms = (
             ChatRoom.objects.filter(category=ChatRoom.Category.EVENTOS, group=self.active_group)
             .select_related('event')

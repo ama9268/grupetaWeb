@@ -7,6 +7,8 @@ urlpatterns = [
     path('', views.RouteListView.as_view(), name='list'),
     path('nueva/', views.RouteCreateView.as_view(), name='create'),
     path('<int:pk>/', views.RouteDetailView.as_view(), name='detail'),
+    path('<int:pk>/editar/', views.RouteUpdateView.as_view(), name='edit'),
+    path('<int:pk>/eliminar/', views.route_delete, name='delete'),
 
     path('strava/conectar/', views.StravaConnectView.as_view(), name='strava_connect'),
     path('strava/callback/', views.StravaCallbackView.as_view(), name='strava_callback'),

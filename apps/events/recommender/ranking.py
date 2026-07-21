@@ -16,7 +16,10 @@ def select_candidates(*, group, target_distance_km=None, target_elevation_gain_m
     tolerancia progresivamente (x2, x3, tope `MAX_TOLERANCE`) antes de rendirse.
     Devuelve `(queryset, tolerance_widened)`.
     """
-    base_qs = Route.objects.filter(group=group, track_geojson__isnull=False, distance_km__isnull=False)
+    base_qs = Route.objects.filter(
+        group=group, track_geojson__isnull=False, distance_km__isnull=False,
+        recommendable_for_salidas=True, is_archived=False,
+    )
 
     if not target_distance_km and not target_elevation_gain_m:
         return base_qs, False

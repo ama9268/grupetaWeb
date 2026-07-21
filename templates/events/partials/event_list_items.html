@@ -1,6 +1,6 @@
 {% for event in events %}
 <a href="{{ event.get_absolute_url }}"
-   style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);text-decoration:none;{% if event.state == 'cancelado' or event.state == 'superado' %}opacity:.72;{% endif %}">
+   style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);text-decoration:none;{% if event.state == 'archivado' %}opacity:.72;{% endif %}">
 
   {# Miniatura / badge de fecha #}
   {% if event.image_url %}

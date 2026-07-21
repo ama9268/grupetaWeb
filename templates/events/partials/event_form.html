@@ -1,5 +1,4 @@
-{# Formulario compartido de crear/editar evento y salida. Espera: form, heading,
-   submit_label, back_url_name; is_salida activa el panel del agente de recomendación. #}
+{# Formulario compartido de crear/editar evento y salida. Espera: form, heading, submit_label, back_url_name; is_salida activa el panel del agente de recomendación. #}
 <div style="max-width:520px;margin:0 auto;">
   <a href="{% url back_url_name %}"
      style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-weight:600;font-size:13px;color:var(--dim);margin-bottom:16px;text-decoration:none;">
@@ -14,8 +13,7 @@
       <p class="form-error" style="margin-bottom:12px;">{{ form.non_field_errors.0 }}</p>
       {% endif %}
 
-      {# Campos estándar (se excluyen la sección de ruta y los objetivos del agente,
-         que son a medida más abajo). #}
+      {# Campos estándar (se excluyen la sección de ruta y los objetivos del agente, que son a medida más abajo). #}
       {% for field in form %}
       {% if field.name != 'route_mode' and field.name != 'associated_route' and field.name != 'gpx_file' and field.name != 'recommended_route' and field.name != 'target_distance_km' and field.name != 'target_elevation_gain_m' %}
       <div class="form-group">

@@ -17,6 +17,24 @@
   {% endif %}
 </div>
 
+{# Filtro de vista #}
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+  {% with active=vista %}
+  <a href="?vista=recomendables"
+     class="filter-pill{% if active == 'recomendables' %} filter-pill--active{% endif %}"
+     style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == 'recomendables' %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">Para Salidas</a>
+  <a href="?vista=no_recomendables"
+     class="filter-pill{% if active == 'no_recomendables' %} filter-pill--active{% endif %}"
+     style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == 'no_recomendables' %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">Para Eventos</a>
+  <a href="?vista=archivadas"
+     class="filter-pill{% if active == 'archivadas' %} filter-pill--active{% endif %}"
+     style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == 'archivadas' %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">Archivadas</a>
+  <a href="?vista=todas"
+     class="filter-pill{% if active == 'todas' %} filter-pill--active{% endif %}"
+     style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == 'todas' %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">Todas</a>
+  {% endwith %}
+</div>
+
 {# Grid de tarjetas #}
 {% if routes %}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">
@@ -31,12 +49,21 @@
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
       </svg>
-      {# Badge dificultad #}
-      {% if route.elevation_gain_m %}
+      {# Badge dificultad: usa el nivel elegido por el moderador; si no se fijó ninguno, se estima a partir del desnivel. #}
+      {% if route.difficulty %}
+      <div style="position:absolute;top:10px;left:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);padding:4px 10px;font-family:var(--font-body);font-weight:600;font-size:11px;color:var(--dim);">
+        {{ route.get_difficulty_display }}
+      </div>
+      {% elif route.elevation_gain_m %}
       <div style="position:absolute;top:10px;left:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);padding:4px 10px;font-family:var(--font-body);font-weight:600;font-size:11px;color:var(--dim);">
         {% if route.elevation_gain_m >= 1500 %}Dura
         {% elif route.elevation_gain_m >= 700 %}Media
         {% else %}Suave{% endif %}
+      </div>
+      {% endif %}
+      {% if route.is_archived %}
+      <div style="position:absolute;top:10px;right:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);padding:4px 10px;font-family:var(--font-body);font-weight:600;font-size:11px;color:var(--error);">
+        Archivada
       </div>
       {% endif %}
     </div>
@@ -85,7 +112,11 @@
   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);margin:0 auto 16px;">
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
   </svg>
+  {% if vista == 'recomendables' %}
   <p style="font-family:var(--font-body);font-size:15px;color:var(--dim);margin-bottom:16px;">No hay rutas todavía.{% if request.user.profile.is_moderator %} ¡Sube la primera!{% endif %}</p>
+  {% else %}
+  <p style="font-family:var(--font-body);font-size:15px;color:var(--dim);margin-bottom:16px;">No hay rutas en este filtro.</p>
+  {% endif %}
   {% if request.user.profile.is_moderator %}
   <a href="{% url 'routes:create' %}" class="btn-primary">+ Subir GPX</a>
   {% endif %}

@@ -13,23 +13,9 @@
   {% endif %}
 </div>
 
-{# Filtro de estado (HTMX) #}
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
-  {% with active=estado %}
-  <a href="?estado=activos" hx-get="{% url list_url_name %}?estado=activos" hx-target="#events-container" hx-swap="innerHTML" hx-push-url="true"
-     class="filter-pill{% if active == 'activos' %} filter-pill--active{% endif %}"
-     style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == 'activos' %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">Activos</a>
-  {% for value, label in state_choices %}
-  <a href="?estado={{ value }}" hx-get="{% url list_url_name %}?estado={{ value }}" hx-target="#events-container" hx-swap="innerHTML" hx-push-url="true"
-     style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == value %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">{{ label }}</a>
-  {% endfor %}
-  <a href="?estado=todos" hx-get="{% url list_url_name %}?estado=todos" hx-target="#events-container" hx-swap="innerHTML" hx-push-url="true"
-     style="font-family:var(--font-body);font-weight:700;font-size:12px;padding:7px 14px;border-radius:999px;text-decoration:none;cursor:pointer;border:1px solid var(--border);{% if active == 'todos' %}background:var(--accent);color:var(--ac-text);border-color:var(--accent);{% else %}background:var(--surface);color:var(--dim);{% endif %}">Todos</a>
-  {% endwith %}
-</div>
-
-<div id="events-container" style="display:flex;flex-direction:column;gap:13px;">
-  {% include 'events/partials/event_list_items.html' %}
+{# Filtro de estado (HTMX) + listado: ver events/partials/event_list_panel.html #}
+<div id="events-list-panel">
+  {% include 'events/partials/event_list_panel.html' %}
 </div>
 
 {% endblock %}

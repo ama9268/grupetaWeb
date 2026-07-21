@@ -136,11 +136,15 @@ def test_fetch_wind_forecast_missing_hour_raises_unavailable(mock_get):
 
 @pytest.fixture
 def route_factory(db, approved_moderator):
-    def make(*, distance_km, elevation_gain_m=None, with_geojson=True, group=None):
+    def make(
+        *, distance_km, elevation_gain_m=None, with_geojson=True, group=None,
+        recommendable_for_salidas=True, is_archived=False,
+    ):
         return Route.objects.create(
             group=group or _default_group(), author=approved_moderator, title=f'Ruta {distance_km}km',
             distance_km=distance_km, elevation_gain_m=elevation_gain_m,
             track_geojson=[[40.0, -3.0], [40.1, -3.0]] if with_geojson else None,
+            recommendable_for_salidas=recommendable_for_salidas, is_archived=is_archived,
         )
     return make
 
@@ -188,6 +192,28 @@ def test_select_candidates_no_targets_returns_all_group_routes(route_factory):
     qs, widened = select_candidates(group=_default_group())
     assert set(qs) == {a, b}
     assert widened is False
+
+
+@pytest.mark.django_db
+def test_select_candidates_excludes_non_recommendable_routes(route_factory):
+    # Ruta puntual (p.ej. un viaje lejano) marcada como no recomendable para Salidas:
+    # nunca debe salir como candidata, aunque encaje en distancia/desnivel.
+    trip = route_factory(distance_km=50, recommendable_for_salidas=False)
+    local = route_factory(distance_km=50, recommendable_for_salidas=True)
+    qs, widened = select_candidates(group=_default_group(), target_distance_km=50)
+    assert list(qs) == [local]
+    assert trip not in qs
+
+
+@pytest.mark.django_db
+def test_select_candidates_excludes_archived_routes(route_factory):
+    # Una ruta archivada (p.ej. bloqueada tras haberse eliminado con historial de
+    # eventos) tampoco debe aparecer como candidata, aunque siga siendo recomendable.
+    archived = route_factory(distance_km=50, is_archived=True)
+    active = route_factory(distance_km=50, is_archived=False)
+    qs, widened = select_candidates(group=_default_group(), target_distance_km=50)
+    assert list(qs) == [active]
+    assert archived not in qs
 
 
 # --- service.py: orquestación (viento mockeado — frontera externa) ---

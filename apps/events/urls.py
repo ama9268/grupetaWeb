@@ -10,8 +10,9 @@ urlpatterns = [
     path('<int:pk>/editar/', views.EventUpdateView.as_view(), name='edit'),
     # Acciones compartidas con Salidas (operan por pk, sin importar el tipo de evento —
     # ver apps/events/CLAUDE.md, sección "Salidas"): se registran una única vez aquí.
-    path('<int:pk>/aceptar/', views.event_accept, name='accept'),
-    path('<int:pk>/cancelar/', views.event_cancel, name='cancel'),
+    path('<int:pk>/marcar-realizado/', views.event_mark_realizado, name='mark_realizado'),
+    path('<int:pk>/archivar/', views.event_archive, name='archive'),
     path('<int:pk>/media/', views.event_media_upload, name='media_upload'),
+    path('<int:pk>/viento/', views.event_wind_grid, name='wind_grid'),
     path('<int:event_id>/rsvp/<str:response>/', views.rsvp_view, name='rsvp'),
 ]

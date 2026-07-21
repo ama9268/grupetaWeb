@@ -66,7 +66,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not content:
             return
 
-        # Las salas archivadas (evento cancelado/borrado) son de solo lectura.
+        # Las salas archivadas (evento archivado/borrado) son de solo lectura.
         if await self.is_room_archived():
             await self.send(text_data=json.dumps({
                 'type': 'error',

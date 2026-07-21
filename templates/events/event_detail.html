@@ -6,6 +6,10 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% if wind_grid_url %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-velocity@2.1.4/dist/leaflet-velocity.min.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet-velocity@2.1.4/dist/leaflet-velocity.min.js"></script>
+{% endif %}
 {% endif %}
 {% endblock %}
 
@@ -18,11 +22,11 @@
 
 {# Hero #}
 <div style="border-radius:var(--radius-xl);border:1px solid var(--border);background:var(--surface);overflow:hidden;margin-bottom:20px;">
-  <div style="aspect-ratio:21/8;background:var(--bg);position:relative;display:flex;align-items:center;justify-content:center;min-height:160px;">
+  <div style="{% if event.image_url %}aspect-ratio:21/8;min-height:160px;{% else %}min-height:104px;{% endif %}background:var(--bg);position:relative;display:flex;align-items:center;justify-content:center;">
     {% if event.image_url %}
     <img src="{{ event.image_url }}" alt="{{ event.title }}" style="width:100%;height:100%;object-fit:cover;">
     {% else %}
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--border);">
       <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
     {% endif %}
@@ -61,17 +65,17 @@
       {% if can_moderate %}
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         {% if event.state == 'pendiente' %}
-        <form method="post" action="{% url 'events:accept' event.pk %}">
+        <form method="post" action="{% url 'events:mark_realizado' event.pk %}">
           {% csrf_token %}
-          <button type="submit" class="btn-primary" style="font-size:13px;">Aceptar</button>
+          <button type="submit" class="btn-primary" style="font-size:13px;">Marcar como realizado</button>
         </form>
         {% endif %}
+        {% if event.state != 'archivado' %}
         <a href="{% url edit_url_name event.pk %}" class="btn-secondary" style="font-size:13px;">Editar</a>
-        {% if event.state != 'cancelado' %}
-        <form method="post" action="{% url 'events:cancel' event.pk %}"
-              onsubmit="return confirm('¿Cancelar este evento? Su chat y álbum quedarán en solo lectura.');">
+        <form method="post" action="{% url 'events:archive' event.pk %}"
+              onsubmit="return confirm('¿Archivar este evento? Su chat y álbum quedarán en solo lectura.');">
           {% csrf_token %}
-          <button type="submit" class="btn-secondary" style="font-size:13px;color:var(--error);">Cancelar evento</button>
+          <button type="submit" class="btn-secondary" style="font-size:13px;color:var(--error);">Archivar</button>
         </form>
         {% endif %}
       </div>
@@ -79,6 +83,16 @@
     </div>
   </div>
 </div>
+
+{# Ruta asociada: mapa + stats — ancho completo (igual que routes:detail), no metida en la columna estrecha de abajo, para que el mapa tenga el mismo ancho que en Rutas. #}
+{% if event.associated_route %}
+<div style="margin-bottom:20px;">
+  <div style="font-family:var(--font-title);font-weight:800;font-size:15px;color:var(--text);margin-bottom:10px;">
+    Ruta asociada: <a href="{% url 'routes:detail' event.associated_route.pk %}" style="color:var(--accent);text-decoration:none;">{{ event.associated_route.title }} →</a>
+  </div>
+  {% include 'routes/partials/route_map.html' with route=event.associated_route wind_grid_url=wind_grid_url %}
+</div>
+{% endif %}
 
 {# Contenido 2 cols #}
 <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
@@ -90,13 +104,28 @@
     <div style="font-family:var(--font-body);font-size:14px;line-height:1.6;color:var(--text);">{{ event.description|linebreaks }}</div>
     {% endif %}
 
-    {# Ruta asociada: mapa + stats #}
-    {% if event.associated_route %}
-    <div>
-      <div style="font-family:var(--font-title);font-weight:800;font-size:15px;color:var(--text);margin-bottom:10px;">
-        Ruta asociada: <a href="{% url 'routes:detail' event.associated_route.pk %}" style="color:var(--accent);text-decoration:none;">{{ event.associated_route.title }} →</a>
+    {# Meteorología: solo si la ruta asociada tiene coordenadas (ver EventDetailView) #}
+    {% if weather %}
+    <div class="card">
+      <div style="font-family:var(--font-title);font-weight:800;font-size:13px;color:var(--text);margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em;">Previsión meteorológica</div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        {% include 'events/partials/weather_icon.html' with icon=weather.sky_icon %}
+        <div style="font-family:var(--font-title);font-weight:800;font-size:32px;color:var(--text);">{{ weather.temperature_c|floatformat:0 }}°</div>
+        <div style="font-family:var(--font-body);font-size:13px;color:var(--dim);line-height:1.5;">
+          <div>{{ weather.sky_description }}</div>
+          {% if weather.precipitation_probability_pct %}<div>Prob. lluvia: {{ weather.precipitation_probability_pct|floatformat:0 }}%</div>{% endif %}
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform:rotate({{ weather.wind_from_deg|add:180 }}deg);flex-shrink:0;">
+              <path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ weather.wind_speed_kmh|floatformat:0 }} km/h
+          </div>
+        </div>
       </div>
-      {% include 'routes/partials/route_map.html' with route=event.associated_route %}
+    </div>
+    {% elif event.associated_route %}
+    <div class="card">
+      <p style="font-family:var(--font-body);font-size:13px;color:var(--dim);">Previsión meteorológica no disponible para esta fecha.</p>
     </div>
     {% endif %}
 
@@ -136,7 +165,7 @@
         <input type="text" name="title" class="input" placeholder="Título (opcional)">
         <button type="submit" class="btn-primary" style="font-size:13px;">Subir a la galería</button>
       </form>
-      {% elif event.is_archived %}
+      {% elif event.state == 'archivado' %}
       <p style="font-family:var(--font-body);font-size:12px;color:var(--dim);border-top:1px solid var(--border);padding-top:12px;">Evento archivado: la galería es de solo lectura.</p>
       {% endif %}
     </div>

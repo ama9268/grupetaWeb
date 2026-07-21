@@ -8,10 +8,8 @@ from apps.groups.querysets import GroupScopedQuerySet
 class Event(models.Model):
     class State(models.TextChoices):
         PENDIENTE = 'pendiente', 'Pendiente'
-        ACEPTADO = 'aceptado', 'Aceptado'
         REALIZADO = 'realizado', 'Realizado'
-        SUPERADO = 'superado', 'Superado'
-        CANCELADO = 'cancelado', 'Cancelado'
+        ARCHIVADO = 'archivado', 'Archivado'
 
     class EventType(models.TextChoices):
         RUTA_ESPECIAL = 'ruta_especial', 'Ruta especial'
@@ -25,7 +23,7 @@ class Event(models.Model):
         FUERTE = 'fuerte', 'Fuerte'
 
     # Estados que se muestran por defecto en el listado (activos/próximos).
-    DEFAULT_LIST_STATES = (State.PENDIENTE, State.ACEPTADO)
+    DEFAULT_LIST_STATES = (State.PENDIENTE,)
 
     group = models.ForeignKey(
         'groups.Group', on_delete=models.PROTECT, related_name='events'
@@ -44,7 +42,6 @@ class Event(models.Model):
     state = models.CharField(
         max_length=20, choices=State.choices, default=State.PENDIENTE
     )
-    is_archived = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, related_name='created_events'
     )
@@ -71,7 +68,10 @@ class Event(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.title} ({self.start_at.strftime("%d/%m/%Y")})'
+        # start_at llega de la BD en UTC (aware); localtime() lo pasa a hora de
+        # TIME_ZONE antes de formatear — un .strftime() directo mostraría la hora UTC
+        # cruda, desfasada respecto a la hora local (ver apps/events/CLAUDE.md).
+        return f'{self.title} ({timezone.localtime(self.start_at).strftime("%d/%m/%Y")})'
 
     def get_absolute_url(self):
         """Salidas (ruta_especial) y el resto de eventos viven en la misma tabla pero se
@@ -94,26 +94,29 @@ class Event(models.Model):
     def attending_count(self):
         return self.rsvps.filter(response=EventRSVP.Response.SI).count()
 
-    def accept(self, by_user):
-        """Acepta el evento (manual, Admin/Moderador) y crea su álbum si no existe."""
+    def mark_realizado(self, by_user):
+        """Marca el evento/salida como realizado (manual, Admin/Moderador) y crea su
+        álbum si no existe. Solo alcanzable desde PENDIENTE (idempotente)."""
         if self.state != self.State.PENDIENTE:
             return
-        self.state = self.State.ACEPTADO
+        self.state = self.State.REALIZADO
         self.save(update_fields=['state'])
         if not self.albums.exists():
             from apps.media_gallery.models import Album
             Album.objects.create(
-                title=f'{self.title} — {self.start_at:%d/%m/%Y}',
+                title=f'{self.title} — {timezone.localtime(self.start_at):%d/%m/%Y}',
                 event=self,
                 group=self.group,
                 created_by=by_user,
             )
 
-    def cancel(self):
-        """Cancela el evento y lo archiva en solo lectura (chat y álbum)."""
-        self.state = self.State.CANCELADO
-        self.is_archived = True
-        self.save(update_fields=['state', 'is_archived'])
+    def archive(self):
+        """Archiva el evento/salida en solo lectura (manual, Admin/Moderador).
+        Alcanzable desde PENDIENTE o REALIZADO (idempotente). Nunca crea álbum."""
+        if self.state == self.State.ARCHIVADO:
+            return
+        self.state = self.State.ARCHIVADO
+        self.save(update_fields=['state'])
         if self.chat_room and not self.chat_room.is_archived:
             self.chat_room.is_archived = True
             self.chat_room.save(update_fields=['is_archived'])

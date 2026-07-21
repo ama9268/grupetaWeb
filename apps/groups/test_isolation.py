@@ -71,8 +71,8 @@ def test_member_of_b_cannot_view_event_of_a(client_b, event_a):
 
 
 @pytest.mark.django_db
-def test_moderator_of_b_cannot_accept_event_of_a(mod_client_b, event_a):
-    response = mod_client_b.post(reverse('events:accept', args=[event_a.pk]))
+def test_moderator_of_b_cannot_mark_realizado_event_of_a(mod_client_b, event_a):
+    response = mod_client_b.post(reverse('events:mark_realizado', args=[event_a.pk]))
     assert response.status_code == 403
     event_a.refresh_from_db()
     assert event_a.state == Event.State.PENDIENTE

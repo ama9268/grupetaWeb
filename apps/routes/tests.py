@@ -151,6 +151,234 @@ def test_duplicate_check_does_not_cross_groups(default_group, approved_moderator
 
 
 @pytest.mark.django_db
+def test_gpx_upload_backfills_difficulty_from_elevation(default_group, moderator_client):
+    moderator_client.post(reverse('routes:create'), {
+        'group': default_group.pk, 'title': 'Ruta con desnivel', 'gpx_file': _gpx_file(),
+    })
+    route = Route.objects.get(title='Ruta con desnivel')
+    # El GPX de prueba solo sube 30 m -> nivel "suave" salvo que se elija a mano.
+    assert route.difficulty in ('', Route.Difficulty.SUAVE)
+
+
+@pytest.mark.django_db
+def test_moderator_can_set_difficulty_on_create(default_group, moderator_client):
+    moderator_client.post(reverse('routes:create'), {
+        'group': default_group.pk, 'title': 'Ruta dura a mano',
+        'difficulty': Route.Difficulty.DURA, 'gpx_file': _gpx_file(),
+    })
+    route = Route.objects.get(title='Ruta dura a mano')
+    assert route.difficulty == Route.Difficulty.DURA
+
+
+@pytest.mark.django_db
+def test_route_defaults_to_recommendable_for_salidas():
+    # Valor por defecto del modelo (una ruta nueva "en blanco", sin pasar por
+    # ningún formulario): recomendable salvo que alguien la desmarque a mano.
+    assert Route().recommendable_for_salidas is True
+
+
+@pytest.mark.django_db
+def test_unchecking_recommendable_checkbox_on_create_is_respected(default_group, moderator_client):
+    # Un checkbox desmarcado no se envía en el POST (comportamiento estándar de
+    # los formularios HTML) — hay que confirmar que eso se traduce en `False`,
+    # no en el `default=True` del modelo.
+    moderator_client.post(reverse('routes:create'), {
+        'group': default_group.pk, 'title': 'Ruta de un viaje lejano', 'gpx_file': _gpx_file(),
+    })
+    route = Route.objects.get(title='Ruta de un viaje lejano')
+    assert route.recommendable_for_salidas is False
+
+
+@pytest.mark.django_db
+def test_checking_recommendable_checkbox_on_create_is_saved(default_group, moderator_client):
+    moderator_client.post(reverse('routes:create'), {
+        'group': default_group.pk, 'title': 'Ruta local', 'gpx_file': _gpx_file(),
+        'recommendable_for_salidas': 'on',
+    })
+    route = Route.objects.get(title='Ruta local')
+    assert route.recommendable_for_salidas is True
+
+
+@pytest.mark.django_db
+def test_moderator_can_toggle_recommendable_on_edit(default_group, approved_moderator, moderator_client):
+    route = Route.objects.create(
+        group=default_group, title='Ruta a marcar', author=approved_moderator,
+        recommendable_for_salidas=True,
+    )
+    response = moderator_client.post(reverse('routes:edit', args=[route.pk]), {
+        'title': route.title, 'description': '', 'difficulty': '',
+        # recommendable_for_salidas se omite -> checkbox desmarcado.
+    })
+    assert response.status_code == 302
+    route.refresh_from_db()
+    assert route.recommendable_for_salidas is False
+
+
+@pytest.mark.django_db
+def test_moderator_can_edit_own_group_route(default_group, approved_moderator, moderator_client):
+    route = Route.objects.create(group=default_group, title='Ruta original', author=approved_moderator)
+    response = moderator_client.post(reverse('routes:edit', args=[route.pk]), {
+        'title': 'Ruta editada',
+        'description': 'Nueva descripción',
+        'difficulty': Route.Difficulty.MEDIA,
+    })
+    assert response.status_code == 302
+    route.refresh_from_db()
+    assert route.title == 'Ruta editada'
+    assert route.description == 'Nueva descripción'
+    assert route.difficulty == Route.Difficulty.MEDIA
+
+
+@pytest.mark.django_db
+def test_member_cannot_edit_route(default_group, approved_member, member_client):
+    route = Route.objects.create(group=default_group, title='Ruta original', author=approved_member)
+    response = member_client.post(reverse('routes:edit', args=[route.pk]), {
+        'title': 'Hackeada', 'difficulty': Route.Difficulty.DURA,
+    })
+    assert response.status_code == 403
+    route.refresh_from_db()
+    assert route.title == 'Ruta original'
+
+
+@pytest.mark.django_db
+def test_moderator_of_other_group_cannot_edit_route(default_group, approved_moderator, moderator_client):
+    other_group = Group.objects.create(name='Otra grupeta', slug='otra-grupeta-edit')
+    from django.contrib.auth.models import User
+    other_moderator = User.objects.create_user(
+        username='mod-otra', email='mod-otra@test.com', password='testpass123', is_active=True,
+    )
+    Membership.objects.create(
+        user=other_moderator, group=other_group,
+        role=Membership.Role.MODERATOR, status=Membership.Status.APPROVED,
+    )
+    route = Route.objects.create(group=default_group, title='Ruta de A', author=approved_moderator)
+
+    from django.test import Client
+    other_client = Client()
+    other_client.login(username='mod-otra', password='testpass123')
+    response = other_client.post(reverse('routes:edit', args=[route.pk]), {'title': 'Hackeada'})
+    # GroupModeratorRequiredMixin: existe y es visible, pero no la modera -> 403
+    # (a diferencia del filtrado por queryset de RouteDetailView, que da 404).
+    assert response.status_code == 403
+    route.refresh_from_db()
+    assert route.title == 'Ruta de A'
+
+
+@pytest.mark.django_db
+def test_moderator_can_delete_own_group_route(default_group, approved_moderator, moderator_client):
+    route = Route.objects.create(group=default_group, title='Ruta a borrar', author=approved_moderator)
+    response = moderator_client.post(reverse('routes:delete', args=[route.pk]))
+    assert response.status_code == 302
+    assert not Route.objects.filter(pk=route.pk).exists()
+
+
+@pytest.mark.django_db
+def test_member_cannot_delete_route(default_group, approved_member, member_client):
+    route = Route.objects.create(group=default_group, title='Ruta protegida', author=approved_member)
+    response = member_client.post(reverse('routes:delete', args=[route.pk]))
+    assert response.status_code == 403
+    assert Route.objects.filter(pk=route.pk).exists()
+
+
+@pytest.mark.django_db
+def test_route_delete_requires_post(default_group, approved_moderator, moderator_client):
+    route = Route.objects.create(group=default_group, title='Ruta con GET', author=approved_moderator)
+    response = moderator_client.get(reverse('routes:delete', args=[route.pk]))
+    assert response.status_code == 302
+    assert Route.objects.filter(pk=route.pk).exists()
+
+
+@pytest.mark.django_db
+def test_deleting_route_with_event_history_archives_instead_of_deleting(
+    default_group, approved_moderator, moderator_client,
+):
+    from datetime import timedelta
+    from django.utils import timezone
+    from apps.events.models import Event
+
+    route = Route.objects.create(group=default_group, title='Ruta de una Salida pasada', author=approved_moderator)
+    event = Event.objects.create(
+        title='Salida del domingo', group=default_group, created_by=approved_moderator,
+        start_at=timezone.now() + timedelta(days=1), associated_route=route,
+    )
+    response = moderator_client.post(reverse('routes:delete', args=[route.pk]))
+    assert response.status_code == 302
+
+    # No se borra: se archiva. El evento sigue enlazado a la misma ruta.
+    route.refresh_from_db()
+    assert Route.objects.filter(pk=route.pk).exists()
+    assert route.is_archived is True
+    event.refresh_from_db()
+    assert event.associated_route_id == route.pk
+
+
+@pytest.mark.django_db
+def test_moderator_can_toggle_is_archived_on_edit(default_group, approved_moderator, moderator_client):
+    route = Route.objects.create(group=default_group, title='Ruta a archivar', author=approved_moderator)
+    response = moderator_client.post(reverse('routes:edit', args=[route.pk]), {
+        'title': route.title, 'description': '', 'difficulty': '',
+        'is_archived': 'on',
+    })
+    assert response.status_code == 302
+    route.refresh_from_db()
+    assert route.is_archived is True
+
+    # Reactivarla: se omite el checkbox -> False.
+    response = moderator_client.post(reverse('routes:edit', args=[route.pk]), {
+        'title': route.title, 'description': '', 'difficulty': '',
+    })
+    assert response.status_code == 302
+    route.refresh_from_db()
+    assert route.is_archived is False
+
+
+@pytest.mark.django_db
+def test_route_list_default_view_excludes_non_recommendable_and_archived(
+    default_group, approved_member, member_client,
+):
+    Route.objects.create(group=default_group, title='Ruta local recomendable', author=approved_member)
+    Route.objects.create(
+        group=default_group, title='Ruta de viaje no recomendable', author=approved_member,
+        recommendable_for_salidas=False,
+    )
+    Route.objects.create(
+        group=default_group, title='Ruta archivada', author=approved_member, is_archived=True,
+    )
+
+    response = member_client.get(reverse('routes:list'))
+    assert b'Ruta local recomendable' in response.content
+    assert b'Ruta de viaje no recomendable' not in response.content
+    assert b'Ruta archivada' not in response.content
+
+
+@pytest.mark.django_db
+def test_route_list_vista_todas_shows_everything(default_group, approved_member, member_client):
+    Route.objects.create(group=default_group, title='Ruta A', author=approved_member)
+    Route.objects.create(
+        group=default_group, title='Ruta B no recomendable', author=approved_member,
+        recommendable_for_salidas=False,
+    )
+    Route.objects.create(
+        group=default_group, title='Ruta C archivada', author=approved_member, is_archived=True,
+    )
+    response = member_client.get(reverse('routes:list'), {'vista': 'todas'})
+    assert b'Ruta A' in response.content
+    assert b'Ruta B no recomendable' in response.content
+    assert b'Ruta C archivada' in response.content
+
+
+@pytest.mark.django_db
+def test_route_list_vista_archivadas(default_group, approved_member, member_client):
+    Route.objects.create(group=default_group, title='Ruta activa', author=approved_member)
+    Route.objects.create(
+        group=default_group, title='Ruta archivada visible', author=approved_member, is_archived=True,
+    )
+    response = member_client.get(reverse('routes:list'), {'vista': 'archivadas'})
+    assert b'Ruta archivada visible' in response.content
+    assert b'Ruta activa' not in response.content
+
+
+@pytest.mark.django_db
 def test_strava_connect_requires_moderator(member_client):
     response = member_client.get(reverse('routes:strava_connect'))
     assert response.status_code == 403

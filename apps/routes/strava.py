@@ -40,6 +40,17 @@ def _expires_at_from(access_info):
     return datetime.fromtimestamp(access_info['expires_at'], tz=dt_timezone.utc)
 
 
+def sport_type_str(activity):
+    """Extrae el valor de texto plano de `activity.sport_type`.
+
+    stravalib envuelve `sport_type` en `RelaxedSportType`, un modelo Pydantic
+    que sobrescribe `__eq__` pero no `__hash__` (no se puede usar `in <set>`
+    directamente) y cuyo `str()` por defecto da `"root='Ride'"`, no `"Ride"`.
+    """
+    value = getattr(activity.sport_type, 'root', activity.sport_type)
+    return value or ''
+
+
 def build_gpx_from_streams(streams, started_at):
     """Convierte los streams de detalle de una actividad de Strava (latlng,
     altitude, time) en un objeto `gpxpy.gpx.GPX` — mismo tipo que produce
@@ -101,7 +112,7 @@ class StravaClient:
     def list_recent_ride_activities(self, days=180):
         after = timezone.now() - timedelta(days=days)
         for activity in self.client.get_activities(after=after):
-            if activity.sport_type in BIKE_SPORT_TYPES:
+            if sport_type_str(activity) in BIKE_SPORT_TYPES:
                 yield activity
 
     def get_activity_streams(self, activity_id):

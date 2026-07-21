@@ -70,15 +70,25 @@ def _apply_gpx_stats(route, gpx_data):
         route.start_point = Point(points[0][1], points[0][0], srid=4326)
 
 
-def create_route_from_gpx(*, group, author, gpx_file, title, description=''):
+def create_route_from_gpx(
+    *, group, author, gpx_file, title, description='', difficulty='', recommendable_for_salidas=True,
+):
     """Crea una Route a partir de un GPX y le extrae las estadísticas.
 
     Si el parseo del GPX falla, la ruta se crea igualmente sin estadísticas
     (mismo comportamiento tolerante que antes). Devuelve `(route, parsed,
     possible_duplicate)`: `possible_duplicate` (apps/routes/dedup.py) es solo un
-    aviso informativo — nunca impide crear la ruta.
+    aviso informativo — nunca impide crear la ruta. `difficulty` es opcional: la
+    fija el moderador a mano, no se deriva del GPX. `recommendable_for_salidas`
+    controla si el agente de recomendación de Salidas puede sugerir esta ruta
+    (`apps.events.recommender.ranking`) — por defecto `True`; quien llama desde
+    un evento que no es una Salida (viaje/carrera/otro) debe pasar `False`.
     """
-    route = Route(group=group, author=author, title=title, description=description, gpx_file=gpx_file)
+    route = Route(
+        group=group, author=author, title=title, description=description,
+        difficulty=difficulty, recommendable_for_salidas=recommendable_for_salidas,
+        gpx_file=gpx_file,
+    )
     try:
         _apply_gpx_stats(route, parse_gpx(gpx_file))
         parsed = True

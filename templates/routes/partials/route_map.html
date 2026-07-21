@@ -2,9 +2,19 @@
 Mapa Leaflet + perfil de elevación reutilizable. Requiere en la página:
   - `route`: instancia de routes.Route (o event.associated_route)
   - Leaflet CSS+JS y Chart.js cargados en el bloque extra_head.
+  - `wind_grid_url` (opcional): activa el botón "Viento" (animación leaflet-velocity
+    para la fecha/hora de un evento concreto — ver apps/events/views.py::event_wind_grid).
+    Solo lo pasa events/event_detail.html; routes/route_detail.html no tiene una fecha
+    a la que atar la previsión, así que aquí se queda inerte (sin botón, sin CDN).
 {% endcomment %}
 <div style="border-radius:var(--radius-xl);border:1px solid var(--border);overflow:hidden;background:var(--surface);height:clamp(240px,42vw,380px);position:relative;isolation:isolate;margin-bottom:18px;">
   <div id="route-map" style="width:100%;height:100%;"></div>
+  {% if wind_grid_url %}
+  <button id="toggle-wind" type="button"
+     style="position:absolute;top:14px;right:14px;z-index:1000;background:var(--surface);color:var(--dim);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-family:var(--font-body);font-weight:700;font-size:12px;cursor:pointer;">
+    Viento
+  </button>
+  {% endif %}
   {% if route.gpx_file %}
   <a href="{{ route.gpx_file.url }}" download
      style="position:absolute;bottom:14px;right:14px;z-index:1000;background:var(--accent);color:var(--ac-text);border-radius:10px;padding:8px 14px;font-family:var(--font-body);font-weight:700;font-size:12px;text-decoration:none;">
@@ -41,14 +51,99 @@ Mapa Leaflet + perfil de elevación reutilizable. Requiere en la página:
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18, attribution: '© OpenStreetMap'
     }).addTo(map);
+    var routeBounds = null;
     if (track && track.length > 1) {
       var accent = '#f2a93c';
       try { accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || accent; } catch (e) {}
       var polyline = L.polyline(track, { color: accent, weight: 3, opacity: .9 }).addTo(map);
-      map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+      routeBounds = polyline.getBounds();
+      map.fitBounds(routeBounds, { padding: [20, 20] });
     } else {
       map.setView([40.4, -3.7], 6);
     }
+
+    // Este mapa puede vivir en una columna flex cuyo ancho final aún no está resuelto en
+    // este punto (p.ej. en la ficha de un evento, comparte fila con la columna de RSVP
+    // que se pinta justo después en el DOM) — Leaflet calcula el centrado con el ancho
+    // provisional que tiene en ese instante, y la ruta queda descuadrada hasta que algo
+    // fuerza un recálculo. Re-centrar en el siguiente frame, una vez asentado el layout,
+    // lo corrige sin esperar a que el usuario interactúe con el mapa.
+    requestAnimationFrame(function () {
+      map.invalidateSize();
+      if (routeBounds) { map.fitBounds(routeBounds, { padding: [20, 20] }); }
+    });
+
+    {% if wind_grid_url %}
+    // Capa de viento (leaflet-velocity): rejilla U/V pedida bajo demanda al pulsar el
+    // botón, no en cada carga de la ficha — ver apps/events/views.py::event_wind_grid.
+    (function () {
+      var btn = document.getElementById('toggle-wind');
+      if (!btn || !window.L || !L.velocityLayer) return;
+      var state = { layer: null, visible: false, loaded: false };
+
+      function setActive(active) {
+        btn.style.background = active ? 'var(--accent)' : 'var(--surface)';
+        btn.style.color = active ? 'var(--ac-text)' : 'var(--dim)';
+        btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+      }
+
+      function buildLayer(data) {
+        return L.velocityLayer({
+          displayValues: true,
+          displayOptions: {
+            velocityType: 'Viento', position: 'bottomleft', emptyString: 'Sin datos de viento',
+            angleConvention: 'meteo', speedUnit: 'km/h', directionString: 'Dirección', speedString: 'Velocidad'
+          },
+          data: data,
+          maxVelocity: 40,
+          velocityScale: 0.01,
+          particleAge: 90,
+          lineWidth: 2,
+          particleMultiplier: 0.003,
+          colorScale: [
+            'rgb(36,104,180)', 'rgb(60,157,194)', 'rgb(128,205,193)', 'rgb(151,218,168)',
+            'rgb(198,231,181)', 'rgb(238,247,217)', 'rgb(255,238,159)', 'rgb(252,217,125)',
+            'rgb(255,182,100)', 'rgb(252,150,75)', 'rgb(250,112,52)', 'rgb(245,64,32)',
+            'rgb(237,45,28)', 'rgb(220,24,32)', 'rgb(180,0,35)'
+          ]
+        });
+      }
+
+      btn.addEventListener('click', function () {
+        if (!state.loaded) {
+          btn.disabled = true;
+          btn.textContent = 'Cargando…';
+          fetch('{{ wind_grid_url }}')
+            .then(function (res) {
+              if (!res.ok) return res.json().then(function (data) { throw new Error(data.error || 'Error'); });
+              return res.json();
+            })
+            .then(function (data) {
+              state.layer = buildLayer(data);
+              state.layer.addTo(map);
+              state.loaded = true;
+              state.visible = true;
+              setActive(true);
+            })
+            .catch(function (err) {
+              alert('No se pudo cargar la previsión de viento: ' + err.message);
+            })
+            .finally(function () {
+              btn.disabled = false;
+              btn.textContent = 'Viento';
+            });
+        } else if (state.visible) {
+          map.removeLayer(state.layer);
+          state.visible = false;
+          setActive(false);
+        } else {
+          state.layer.addTo(map);
+          state.visible = true;
+          setActive(true);
+        }
+      });
+    })();
+    {% endif %}
   }
 
   var elev = readJSON('route-elev-data');

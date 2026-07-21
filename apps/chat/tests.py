@@ -163,17 +163,38 @@ def test_chat_sidebar_splits_and_orders_event_rooms(moderator_client, approved_m
     group = _default_group()
     near = Event.objects.create(title='Cercano', start_at=now + timedelta(days=2), created_by=approved_moderator, group=group)
     far = Event.objects.create(title='Lejano', start_at=now + timedelta(days=20), created_by=approved_moderator, group=group)
-    cancelado = Event.objects.create(title='Cancelado', start_at=now + timedelta(days=3), created_by=approved_moderator, group=group)
-    cancelado.cancel()
+    archivado = Event.objects.create(title='Archivado', start_at=now + timedelta(days=3), created_by=approved_moderator, group=group)
+    archivado.archive()
 
     response = moderator_client.get(reverse('chat:room_detail', args=['general']))
     active_slugs = [r.slug for r in response.context['event_rooms']]
     archived_slugs = [r.slug for r in response.context['archived_event_rooms']]
 
-    # Cancelado va a archivadas; los activos ordenados por fecha desc (lejano antes que cercano).
-    assert cancelado.chat_room.slug in archived_slugs
-    assert cancelado.chat_room.slug not in active_slugs
+    # Archivado va a archivadas; los activos ordenados por fecha desc (lejano antes que cercano).
+    assert archivado.chat_room.slug in archived_slugs
+    assert archivado.chat_room.slug not in active_slugs
     assert active_slugs.index(far.chat_room.slug) < active_slugs.index(near.chat_room.slug)
+
+
+@pytest.mark.django_db
+def test_serialize_message_timestamp_is_local_not_utc(approved_member):
+    # created_at llega de la BD en UTC (aware); serialize_message debe convertirlo a
+    # hora local (TIME_ZONE=Europe/Madrid) antes de formatear, no mostrar la UTC cruda.
+    from datetime import datetime, timezone as dt_timezone
+    from django.utils import timezone as dj_timezone
+    from .serializers import serialize_message
+
+    room = ChatRoom.objects.create(slug='sala-tz', name='TZ', group=_default_group())
+    msg = Message.objects.create(room=room, user=approved_member, content='hola')
+    # 08:00 UTC en pleno verano (CEST, UTC+2) debe mostrarse como 10:00 local.
+    msg.created_at = datetime(2026, 7, 15, 8, 0, tzinfo=dt_timezone.utc)
+    msg.save(update_fields=['created_at'])
+    msg.refresh_from_db()
+
+    data = serialize_message(msg)
+    expected = dj_timezone.localtime(msg.created_at).strftime('%d/%m/%Y %H:%M')
+    assert data['timestamp'] == expected
+    assert data['timestamp'] == '15/07/2026 10:00'
 
 
 @pytest.mark.django_db

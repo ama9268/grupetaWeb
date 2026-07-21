@@ -1,6 +1,5 @@
 import pytest
-from datetime import timedelta
-from django.core.management import call_command
+from datetime import datetime, timedelta, timezone as dt_timezone
 from django.urls import reverse
 from django.utils import timezone
 
@@ -107,8 +106,8 @@ def test_moderator_can_create_event(moderator_client):
 
 
 @pytest.mark.django_db
-def test_member_cannot_accept_event(member_client, future_event):
-    response = member_client.post(reverse('events:accept', args=[future_event.pk]))
+def test_member_cannot_mark_realizado(member_client, future_event):
+    response = member_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
     assert response.status_code == 403
     future_event.refresh_from_db()
     assert future_event.state == 'pendiente'
@@ -117,17 +116,17 @@ def test_member_cannot_accept_event(member_client, future_event):
 # --- Transiciones de estado ---
 
 @pytest.mark.django_db
-def test_accept_sets_state_and_creates_album(moderator_client, future_event):
-    moderator_client.post(reverse('events:accept', args=[future_event.pk]))
+def test_mark_realizado_sets_state_and_creates_album(moderator_client, future_event):
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
     future_event.refresh_from_db()
-    assert future_event.state == 'aceptado'
+    assert future_event.state == 'realizado'
     assert Album.objects.filter(event=future_event).count() == 1
 
 
 @pytest.mark.django_db
-def test_accept_is_idempotent_album(moderator_client, future_event):
-    moderator_client.post(reverse('events:accept', args=[future_event.pk]))
-    moderator_client.post(reverse('events:accept', args=[future_event.pk]))
+def test_mark_realizado_is_idempotent_album(moderator_client, future_event):
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
     assert Album.objects.filter(event=future_event).count() == 1
 
 
@@ -179,30 +178,123 @@ def test_event_creation_creates_chat_room(future_event):
 
 
 @pytest.mark.django_db
-def test_cancel_archives_event(moderator_client, future_event):
-    moderator_client.post(reverse('events:cancel', args=[future_event.pk]))
+def test_archive_from_pendiente(moderator_client, future_event):
+    response = moderator_client.post(reverse('events:archive', args=[future_event.pk]))
+    assert response.status_code == 302
     future_event.refresh_from_db()
-    assert future_event.state == 'cancelado'
-    assert future_event.is_archived is True
+    assert future_event.state == 'archivado'
+    assert future_event.chat_room.is_archived is True
+    assert not Album.objects.filter(event=future_event).exists()  # archive() nunca crea álbum
+
+
+@pytest.mark.django_db
+def test_archive_from_realizado_keeps_existing_album(moderator_client, future_event):
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
+    moderator_client.post(reverse('events:archive', args=[future_event.pk]))
+    future_event.refresh_from_db()
+    assert future_event.state == 'archivado'
+    assert future_event.chat_room.is_archived is True
+    assert Album.objects.filter(event=future_event).count() == 1
+
+
+@pytest.mark.django_db
+def test_archive_is_idempotent(moderator_client, future_event):
+    moderator_client.post(reverse('events:archive', args=[future_event.pk]))
+    moderator_client.post(reverse('events:archive', args=[future_event.pk]))
+    future_event.refresh_from_db()
+    assert future_event.state == 'archivado'
+
+
+@pytest.mark.django_db
+def test_moderator_can_edit_realizado_event(moderator_client, future_event, approved_moderator):
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
+    response = moderator_client.post(reverse('events:edit', args=[future_event.pk]), {
+        'title': 'Evento realizado editado', 'event_type': 'otro',
+        'start_at': (timezone.now() + timedelta(days=7)).strftime('%Y-%m-%dT%H:%M'),
+        'description': '', 'location': '',
+    })
+    assert response.status_code == 302
+    future_event.refresh_from_db()
+    assert future_event.title == 'Evento realizado editado'
+
+
+# --- Cambio de estado desde el propio formulario de edición ---
+
+def _edit_payload(event, **overrides):
+    payload = {
+        'title': event.title, 'event_type': 'otro',
+        'start_at': event.start_at.strftime('%Y-%m-%dT%H:%M'),
+        'description': '', 'location': '',
+    }
+    payload.update(overrides)
+    return payload
+
+
+@pytest.mark.django_db
+def test_edit_form_can_mark_realizado(moderator_client, future_event):
+    response = moderator_client.post(
+        reverse('events:edit', args=[future_event.pk]),
+        _edit_payload(future_event, state='realizado'),
+    )
+    assert response.status_code == 302
+    future_event.refresh_from_db()
+    assert future_event.state == 'realizado'
+    assert Album.objects.filter(event=future_event).count() == 1
+
+
+@pytest.mark.django_db
+def test_edit_form_can_archive_from_pendiente(moderator_client, future_event):
+    response = moderator_client.post(
+        reverse('events:edit', args=[future_event.pk]),
+        _edit_payload(future_event, state='archivado'),
+    )
+    assert response.status_code == 302
+    future_event.refresh_from_db()
+    assert future_event.state == 'archivado'
     assert future_event.chat_room.is_archived is True
 
 
 @pytest.mark.django_db
-def test_update_event_states_command(db, approved_moderator):
-    past = timezone.now() - timedelta(days=1)
-    pendiente = Event.objects.create(
-        title='Pasado pendiente', start_at=past, created_by=approved_moderator, group=_default_group(),
-        state=Event.State.PENDIENTE,
+def test_edit_form_can_archive_from_realizado(moderator_client, future_event):
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
+    response = moderator_client.post(
+        reverse('events:edit', args=[future_event.pk]),
+        _edit_payload(future_event, state='archivado'),
     )
-    aceptado = Event.objects.create(
-        title='Pasado aceptado', start_at=past, created_by=approved_moderator, group=_default_group(),
-        state=Event.State.ACEPTADO,
+    assert response.status_code == 302
+    future_event.refresh_from_db()
+    assert future_event.state == 'archivado'
+
+
+@pytest.mark.django_db
+def test_edit_form_rejects_backward_state_transition(moderator_client, future_event):
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
+    response = moderator_client.post(
+        reverse('events:edit', args=[future_event.pk]),
+        _edit_payload(future_event, state='pendiente'),
     )
-    call_command('update_event_states')
-    pendiente.refresh_from_db()
-    aceptado.refresh_from_db()
-    assert pendiente.state == 'superado'
-    assert aceptado.state == 'realizado'
+    assert response.status_code == 200  # formulario re-renderizado con error, no redirect
+    future_event.refresh_from_db()
+    assert future_event.state == 'realizado'  # no cambia
+
+
+@pytest.mark.django_db
+def test_edit_form_without_state_field_keeps_current_state(moderator_client, future_event):
+    # Un POST que no incluya 'state' (p.ej. un cliente que no conoce el campo) no debe
+    # tocar el estado — required=False, ausencia = sin cambio.
+    response = moderator_client.post(
+        reverse('events:edit', args=[future_event.pk]), _edit_payload(future_event),
+    )
+    assert response.status_code == 302
+    future_event.refresh_from_db()
+    assert future_event.state == 'pendiente'
+
+
+@pytest.mark.django_db
+def test_moderator_cannot_edit_archived_event(moderator_client, future_event):
+    moderator_client.post(reverse('events:archive', args=[future_event.pk]))
+    response = moderator_client.get(reverse('events:edit', args=[future_event.pk]))
+    assert response.status_code == 403
 
 
 # --- Listado / filtros ---
@@ -211,19 +303,27 @@ def test_update_event_states_command(db, approved_moderator):
 def test_list_default_filter_shows_only_active(moderator_client, approved_moderator):
     Event.objects.create(title='PendVisibleXYZ', start_at=timezone.now() + timedelta(days=1),
                          created_by=approved_moderator, group=_default_group(), state=Event.State.PENDIENTE)
-    Event.objects.create(title='CancelHiddenXYZ', start_at=timezone.now() + timedelta(days=1),
-                         created_by=approved_moderator, group=_default_group(), state=Event.State.CANCELADO)
+    Event.objects.create(title='ArchivedHiddenXYZ', start_at=timezone.now() + timedelta(days=1),
+                         created_by=approved_moderator, group=_default_group(), state=Event.State.ARCHIVADO)
     response = moderator_client.get(reverse('events:list'))
     assert b'PendVisibleXYZ' in response.content
-    assert b'CancelHiddenXYZ' not in response.content
+    assert b'ArchivedHiddenXYZ' not in response.content
 
 
 @pytest.mark.django_db
 def test_list_filter_by_state(moderator_client, approved_moderator):
-    Event.objects.create(title='CanceladoUnoXYZ', start_at=timezone.now() + timedelta(days=1),
-                         created_by=approved_moderator, group=_default_group(), state=Event.State.CANCELADO)
-    response = moderator_client.get(reverse('events:list'), {'estado': 'cancelado'})
-    assert b'CanceladoUnoXYZ' in response.content
+    Event.objects.create(title='ArchivadoUnoXYZ', start_at=timezone.now() + timedelta(days=1),
+                         created_by=approved_moderator, group=_default_group(), state=Event.State.ARCHIVADO)
+    response = moderator_client.get(reverse('events:list'), {'estado': 'archivado'})
+    assert b'ArchivadoUnoXYZ' in response.content
+
+
+@pytest.mark.django_db
+def test_list_has_no_activos_pseudo_filter(moderator_client):
+    # "Activos" no es un estado real (ver Event.State) — no debe ofrecerse como filtro.
+    response = moderator_client.get(reverse('events:list'))
+    assert b'Activos' not in response.content
+    assert b'?estado=activos' not in response.content
 
 
 # --- Subida de media ---
@@ -239,14 +339,30 @@ def test_media_upload_blocked_without_album(member_client, future_event):
 
 @pytest.mark.django_db
 def test_media_upload_rejects_oversized_file(moderator_client, future_event, settings):
-    # Con álbum (evento aceptado), un archivo que supera el límite no se sube.
+    # Con álbum (evento realizado), un archivo que supera el límite no se sube.
     from django.core.files.uploadedfile import SimpleUploadedFile
     from apps.media_gallery.models import MediaItem
     settings.MAX_IMAGE_UPLOAD_SIZE = 100  # bytes
-    moderator_client.post(reverse('events:accept', args=[future_event.pk]))
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
     png = SimpleUploadedFile(
         'foto.png', b'\x89PNG\r\n\x1a\n' + b'\x00' * 253, content_type='image/png'
     )
+    response = moderator_client.post(
+        reverse('events:media_upload', args=[future_event.pk]),
+        {'media_type': 'image', 'file': png},
+    )
+    assert response.status_code == 302
+    assert not MediaItem.objects.exists()
+
+
+@pytest.mark.django_db
+def test_media_upload_blocked_when_archived(moderator_client, future_event):
+    # Álbum existente (realizado) pero ya archivado: sigue sin admitir subidas.
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from apps.media_gallery.models import MediaItem
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
+    moderator_client.post(reverse('events:archive', args=[future_event.pk]))
+    png = SimpleUploadedFile('foto.png', b'\x89PNG\r\n\x1a\n' + b'\x00' * 253, content_type='image/png')
     response = moderator_client.post(
         reverse('events:media_upload', args=[future_event.pk]),
         {'media_type': 'image', 'file': png},
@@ -281,8 +397,8 @@ def test_detail_renders_with_route(member_client, approved_moderator):
 
 
 @pytest.mark.django_db
-def test_detail_renders_accepted_with_album(moderator_client, future_event):
-    moderator_client.post(reverse('events:accept', args=[future_event.pk]))
+def test_detail_renders_realizado_with_album(moderator_client, future_event):
+    moderator_client.post(reverse('events:mark_realizado', args=[future_event.pk]))
     response = moderator_client.get(reverse('events:detail', args=[future_event.pk]))
     assert response.status_code == 200
     # Con álbum y no archivado, aparece el formulario de subida.
@@ -331,6 +447,27 @@ def test_create_event_with_new_gpx_creates_and_links_route(moderator_client, app
     assert route.distance_km is not None and route.distance_km > 0
     # Es una ruta normal, visible en el módulo Rutas.
     assert Route.objects.filter(pk=route.pk).exists()
+    # Nace de un evento que NO es una Salida ('otro') -> no se recomienda para Salidas.
+    assert route.recommendable_for_salidas is False
+
+
+@pytest.mark.django_db
+def test_create_salida_with_new_gpx_route_is_recommendable(moderator_client, approved_moderator):
+    from apps.routes.models import Route
+    response = moderator_client.post(reverse('salidas:create'), {
+        'group': _default_group().pk,
+        'title': 'Salida con GPX nuevo',
+        'start_at': (timezone.now() + timedelta(days=3)).strftime('%Y-%m-%dT%H:%M'),
+        'description': '', 'location': '', 'pace_level': 'medio',
+        'route_mode': 'new',
+        'gpx_file': _gpx_upload(),
+    })
+    assert response.status_code == 302
+    salida = Event.objects.get(title='Salida con GPX nuevo')
+    route = salida.associated_route
+    assert route is not None
+    # Nace de una Salida -> sí se recomienda para futuras Salidas.
+    assert route.recommendable_for_salidas is True
 
 
 @pytest.mark.django_db
@@ -544,3 +681,46 @@ def test_rsvp_works_from_salidas_section(approved_member, member_client, future_
     assert response.status_code == 200
     rsvp = EventRSVP.objects.get(event=future_salida, member=approved_member)
     assert rsvp.response == 'si'
+
+
+# --- Zona horaria: start_at llega de la BD en UTC (aware); mostrarlo con .strftime()
+# directo (sin pasar antes por timezone.localtime()) muestra la hora UTC cruda en vez
+# de la hora local (Europe/Madrid) — bug reportado: una Salida creada a las 08:00
+# reaparecía como 06:00 en verano (CEST, UTC+2) al reabrir el formulario de edición. ---
+
+@pytest.mark.django_db
+def test_edit_form_initial_start_at_is_local_not_utc(moderator_client, approved_moderator):
+    # 08:00 CEST (verano, UTC+2) = 06:00 UTC en BD.
+    event = Event.objects.create(
+        title='Con hora', event_type=Event.EventType.OTRO,
+        start_at=datetime(2026, 7, 15, 6, 0, tzinfo=dt_timezone.utc),
+        created_by=approved_moderator, group=_default_group(),
+    )
+    response = moderator_client.get(reverse('events:edit', args=[event.pk]))
+    assert response.status_code == 200
+    assert b'value="2026-07-15T08:00"' in response.content
+    assert b'value="2026-07-15T06:00"' not in response.content
+
+
+@pytest.mark.django_db
+def test_event_str_uses_local_date_across_midnight_boundary(approved_moderator):
+    # 00:30 CEST del día 16 = 22:30 UTC del día 15 anterior — un .strftime() directo
+    # sobre el valor UTC crudo mostraría "15/07/2026", un día antes de la fecha real.
+    event = Event.objects.create(
+        title='Medianoche', event_type=Event.EventType.OTRO,
+        start_at=datetime(2026, 7, 15, 22, 30, tzinfo=dt_timezone.utc),
+        created_by=approved_moderator, group=_default_group(),
+    )
+    assert '16/07/2026' in str(event)
+
+
+@pytest.mark.django_db
+def test_mark_realizado_album_title_uses_local_date(moderator_client, approved_moderator):
+    event = Event.objects.create(
+        title='Nocturna', event_type=Event.EventType.OTRO,
+        start_at=datetime(2026, 7, 15, 22, 30, tzinfo=dt_timezone.utc),
+        created_by=approved_moderator, group=_default_group(),
+    )
+    moderator_client.post(reverse('events:mark_realizado', args=[event.pk]))
+    album = Album.objects.get(event=event)
+    assert '16/07/2026' in album.title
